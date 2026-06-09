@@ -1,0 +1,31 @@
+{
+  "name": "recall",
+  "version": "0.0.1",
+  "private": true,
+  "description": "Local-first cross-agent memory layer for coding agents. Captures Claude Code transcripts, embeds them locally, and auto-injects relevant past context into new sessions. Nothing leaves your machine.",
+  "type": "module",
+  "bin": {
+    "recalld": "dist/daemon/server.js",
+    "recall-mcp": "dist/mcp/server.js",
+    "recall-backfill": "dist/cli/backfill.js",
+    "recall-install-hooks": "dist/cli/install-hooks.js"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "setup": "npm run build && node dist/cli/setup.js",
+    "daemon": "node dist/daemon/server.js",
+    "backfill": "node dist/cli/backfill.js",
+    "install-hooks": "node dist/cli/install-hooks.js"
+  },
+  "dependencies": {
+    "@huggingface/transformers": "^3.3.3",
+    "@modelcontextprotocol/sdk": "^1.13.0",
+    "better-sqlite3": "^12.2.0",
+    "sqlite-vec": "^0.1.7-alpha.2"
+  },
+  "devDependencies": {
+    "@types/better-sqlite3": "^7.6.11",
+    "@types/node": "^22.10.0",
+    "typescript": "^5.7.2"
+  }
+}
