@@ -67,14 +67,8 @@ function voiceAnswer(snippets: Snippet[]): string {
   return parts.join(" ... ");
 }
 
-async function main(): Promise<void> {
-  getDb();
-  const token = getOrCreateToken();
-  console.error("[recalld] warming embedding model...");
-  await warmup();
-  console.error("[recalld] model ready");
-
-  const server = http.createServer(async (req, res) => {
+function makeHandler(token: string) {
+  return async (req: IncomingMessage, res: ServerResponse) => {
     try {
       if (!authorized(req, token)) {
         return json(res, 401, { error: "unauthorized" });
@@ -121,23 +115,35 @@ async function main(): Promise<void> {
     } catch (e) {
       json(res, 500, { error: (e as Error).message });
     }
-  });
+  };
+}
 
-  server.on("error", (err: NodeJS.ErrnoException) => {
-    if (err.code === "EADDRINUSE") {
-      // Another daemon already owns the port — that's fine, exit quietly.
-      process.exit(0);
-    }
-    console.error("[recalld] server error:", err.message);
-    process.exit(1);
-  });
+async function main(): Promise<void> {
+  getDb();
+  const token = getOrCreateToken();
+  console.error("[recalld] warming embedding model...");
+  await warmup();
+  console.error("[recalld] model ready");
 
-  server.listen(PORT, HOST, () => {
-    console.error(`[recalld] listening on http://${HOST}:${PORT}`);
-    if (HOST !== "127.0.0.1") {
-      console.error(`[recalld] non-localhost bind: remote requests require the Bearer token`);
-    }
-  });
+  // Always serve localhost (local hooks + MCP). If RECALL_BIND names another
+  // address (e.g. a Tailscale IP for phone access), serve that too — without
+  // exposing on the LAN. De-dupe so RECALL_BIND=127.0.0.1 doesn't double-bind.
+  const handler = makeHandler(token);
+  const hosts = Array.from(new Set(["127.0.0.1", HOST]));
+  for (const host of hosts) {
+    const server = http.createServer(handler);
+    server.on("error", (err: NodeJS.ErrnoException) => {
+      if (err.code === "EADDRINUSE") process.exit(0); // another daemon owns it
+      console.error(`[recalld] server error on ${host}:`, err.message);
+      process.exit(1);
+    });
+    server.listen(PORT, host, () => {
+      console.error(`[recalld] listening on http://${host}:${PORT}`);
+      if (host !== "127.0.0.1") {
+        console.error("[recalld] non-localhost bind: remote requests require the Bearer token");
+      }
+    });
+  }
 }
 
 main().catch((e) => {
