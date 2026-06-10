@@ -131,15 +131,22 @@ async function main(): Promise<void> {
   const handler = makeHandler(token);
   const hosts = Array.from(new Set(["127.0.0.1", HOST]));
   for (const host of hosts) {
+    const primary = host === "127.0.0.1";
     const server = http.createServer(handler);
     server.on("error", (err: NodeJS.ErrnoException) => {
-      if (err.code === "EADDRINUSE") process.exit(0); // another daemon owns it
-      console.error(`[recalld] server error on ${host}:`, err.message);
-      process.exit(1);
+      if (primary) {
+        if (err.code === "EADDRINUSE") process.exit(0); // another daemon owns localhost
+        console.error(`[recalld] fatal on ${host}:`, err.message);
+        process.exit(1);
+      } else {
+        // Secondary bind (e.g. a Tailscale IP) is best-effort: if it's
+        // unavailable (Tailscale down at boot), keep serving localhost.
+        console.error(`[recalld] could not bind ${host} (${err.code}); serving localhost only`);
+      }
     });
     server.listen(PORT, host, () => {
       console.error(`[recalld] listening on http://${host}:${PORT}`);
-      if (host !== "127.0.0.1") {
+      if (!primary) {
         console.error("[recalld] non-localhost bind: remote requests require the Bearer token");
       }
     });
