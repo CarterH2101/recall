@@ -100,10 +100,18 @@ function makeHandler(token: string) {
         });
         return json(res, 200, { snippets });
       }
-      // Voice-friendly Q&A for the Siri shortcut: returns plain spoken text.
-      if (req.method === "POST" && req.url === "/ask") {
-        const b = await readBody(req);
-        const q = b.q ?? b.query;
+      // Voice-friendly Q&A for the Siri shortcut. Accepts POST {q} OR GET /ask?q=...
+      // GET matters: iOS Shortcuts can drop POST-with-body over HTTP/2 ("the
+      // network connection was lost"), while GET works reliably.
+      if (req.url === "/ask" || req.url?.startsWith("/ask?")) {
+        let q: string | undefined;
+        if (req.method === "POST") {
+          const b = await readBody(req);
+          q = b.q ?? b.query;
+        } else if (req.method === "GET") {
+          const u = new URL(req.url, "http://localhost");
+          q = u.searchParams.get("q") ?? u.searchParams.get("query") ?? undefined;
+        }
         if (!q) return json(res, 400, { error: "q required" });
         const snippets = await recall(String(q), { limit: 4, minScore: ASK_MIN_SCORE });
         const answer = voiceAnswer(snippets);
