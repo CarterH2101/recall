@@ -67,9 +67,17 @@ function voiceAnswer(snippets: Snippet[]): string {
   return parts.join(" ... ");
 }
 
+const DEBUG = process.env.RECALL_DEBUG === "1";
+
 function makeHandler(token: string) {
   return async (req: IncomingMessage, res: ServerResponse) => {
     try {
+      if (DEBUG) {
+        const ct = req.headers["content-type"] || "";
+        console.error(
+          `[req] ${req.socket.remoteAddress} ${req.method} ${req.url} auth=${req.headers.authorization ? "yes" : "no"} ct=${ct}`,
+        );
+      }
       if (!authorized(req, token)) {
         return json(res, 401, { error: "unauthorized" });
       }
