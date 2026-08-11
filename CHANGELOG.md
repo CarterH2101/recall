@@ -4,6 +4,21 @@ All notable changes to this project are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and versions follow
 [Semantic Versioning](https://semver.org/).
 
+## [0.5.0] — 2026-08-11
+
+Your memory has a face now.
+
+### Added
+- **Viewer** at `http://127.0.0.1:4319/ui` — single self-contained HTML page
+  served by the daemon, no framework, no build step. Tabs: Search (live
+  `/recall` with fact/turn badges and scores), Sessions (browse any captured
+  session, per-turn "never inject" index removal), Facts (add/edit/pin/
+  archive inline), Activity (the injections log with 👍/👎 labeling that
+  appends to `~/.recall/eval/labels.jsonl` — closing the eval loop), Stats
+  (turns/day chart, source breakdown, hook injection rate).
+- The viewer and its `/api/*` routes are **localhost-only even with a valid
+  bearer token** — the token exists for Siri, not remote administration.
+
 ## [0.4.0] — 2026-08-11
 
 Raw history gets distilled into durable, editable facts.

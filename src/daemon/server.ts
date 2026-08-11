@@ -6,6 +6,7 @@ import { recall, recentSessions, type Snippet } from "../lib/recall.js";
 import { getOrCreateToken } from "../lib/token.js";
 import { getAdapter } from "../lib/sources/registry.js";
 import { startWatchers } from "./watcher.js";
+import { handleUiRoute } from "./ui-routes.js";
 import { SERVICE, VERSION } from "../lib/version.js";
 import {
   writeDaemonInfo,
@@ -145,6 +146,8 @@ function makeHandler(token: string, port: number) {
       if (!authorized(req, token)) {
         return json(res, 401, { error: "unauthorized" });
       }
+      // Admin UI + its API: localhost-only regardless of token.
+      if (await handleUiRoute(req, res, isLocal(req))) return;
       if (req.method === "GET" && req.url === "/health") {
         return json(res, 200, healthPayload(port));
       }
