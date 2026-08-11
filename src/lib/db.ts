@@ -112,6 +112,20 @@ const MIGRATIONS: ((db: Database.Database) => void)[] = [
       last_sync TEXT
     );
   `),
+  /* v6 — team sync v2: member registry, attribution, record-chain cursor */
+  (db) =>
+    db.exec(`
+    ALTER TABLE facts ADD COLUMN origin_member TEXT;
+    ALTER TABLE sync_state ADD COLUMN last_rec_seq INTEGER NOT NULL DEFAULT 0;
+
+    CREATE TABLE team_members (
+      member_id TEXT PRIMARY KEY,
+      name      TEXT,
+      sign_pub  TEXT NOT NULL,
+      role      TEXT NOT NULL DEFAULT 'member',
+      status    TEXT NOT NULL DEFAULT 'active'
+    );
+  `),
 ];
 
 /** Current schema version — what a fully migrated db's user_version equals. */

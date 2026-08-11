@@ -312,15 +312,14 @@ export async function startDaemon(): Promise<void> {
   startWatchers();
 
   // Team sync heartbeat, only when configured. Best-effort: a down hub never
-  // affects local operation.
-  const { loadSyncConfig, push, pull } = await import("../lib/sync.js");
+  // affects local operation. syncNow() dispatches v1/v2 protocol itself and,
+  // for admins, also approves pending joiners.
+  const { loadSyncConfig } = await import("../lib/sync.js");
   if (loadSyncConfig()) {
     const beat = async () => {
       try {
-        const cfg = loadSyncConfig();
-        if (!cfg) return;
-        await push(cfg);
-        await pull(cfg);
+        const { syncNow } = await import("../lib/team.js");
+        await syncNow();
       } catch (e) {
         console.error(`[sync] heartbeat failed: ${(e as Error).message}`);
       }

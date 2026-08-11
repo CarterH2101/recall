@@ -182,19 +182,30 @@ npm run bundle-plugin    # regenerate committed plugin bundles (CI checks freshn
 ## Team sync (optional)
 
 Pool distilled facts across a team without the server ever reading them:
-facts are AES-256-GCM encrypted with a shared team key before leaving your
-machine, the hub stores opaque blobs, and teammates re-embed locally —
-embeddings never travel. Sharing is per-fact opt-in, raw transcripts never
-sync, and a redaction gate hard-blocks anything secret-shaped at push.
+facts are AES-256-GCM encrypted before leaving your machine, the hub stores
+opaque blobs, and teammates re-embed locally — embeddings never travel.
+Sharing is per-fact opt-in, raw transcripts never sync, and a redaction gate
+hard-blocks anything secret-shaped at push.
+
+Teams have real member identity: each member holds their own Ed25519/X25519
+keys, every request is signed (no shared tokens), membership changes ride an
+admin-signed hash chain, and team keys are generational — `recalld sync
+revoke` cuts a member's server access instantly and rotates the key so
+everything after that moment is cryptographically invisible to them. Member
+display names are end-to-end encrypted too; the hub can't render your team
+roster. Facts show "shared by <name>" in your local viewer.
 
 ```
-recalld sync init --server https://your-hub    # create team, print invite
-recalld sync join <invite>                     # on a teammate's machine
+recalld sync init --server https://your-hub --me Carter   # create team, print invite
+recalld sync join <invite> --me Alice                     # teammate; admin's next sync approves
 recalld sync share <fact-id> && recalld sync now
+recalld sync rotate | revoke <member> | status
 ```
 
 Self-host the hub: [recall-sync-server](https://github.com/CarterH2101/recall-sync-server)
-(single container, SQLite, BSL 1.1).
+(single container, SQLite, BSL 1.1) — its README states the full threat model
+plainly, including what this design does *not* defend against. v1 shared-key
+teams upgrade in place with `recalld sync upgrade`.
 
 ## Roadmap
 

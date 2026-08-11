@@ -4,6 +4,40 @@ All notable changes to this project are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and versions follow
 [Semantic Versioning](https://semver.org/).
 
+## [1.1.0] — 2026-08-11
+
+Team sync grows real identity. This is the release that makes revoking a
+teammate a command instead of a team rebuild.
+
+### Added
+- **Per-member identity** (migration v6): every member holds their own
+  Ed25519 signing key and X25519 box key; all hub requests are signed — the
+  shared bearer token is gone from v2 teams. Member ids are self-certifying
+  hashes of the public key.
+- **Generation-based team keys with lockbox distribution.** `recalld sync
+  rotate` mints a new key generation (history is never re-encrypted);
+  `recalld sync revoke <member>` kills their server access instantly and
+  rotates so post-revocation content is cryptographically invisible to them.
+  Stale-generation pushes self-heal via 409 + retry.
+- **Admin-signed hash-chained membership records** — the client verifies the
+  chain against the admin key pinned from the invite before trusting any
+  lockbox. `sync status` prints the chain head for out-of-band split-view
+  detection.
+- **E2E member display names** (encrypted into record bodies under a
+  metadata key; the hub cannot render a team roster) and **attribution**:
+  synced facts carry `origin_member`, resolved to names locally.
+- **Approval-gated joins**: one invite code, one command; the admin's next
+  sync verifies and approves (auto-approve default, `--require-approval`
+  planned).
+- **In-place v1 upgrade**: `recalld sync upgrade` — the old shared key
+  becomes generation 1 (history stays readable), the bearer token dies, and
+  the team auto-rotates to generation 2.
+- New e2e suite (`scripts/verify-team-e2e.mjs`): 16 checks across five
+  isolated client processes — join/approve, attribution, hub-opacity (no
+  plaintext, no names), rotation, stale-gen self-heal, revocation, upgrade.
+- 8 adversarial crypto unit tests (tampered records, substituted lockboxes,
+  forged authorship, replayed requests, chain gaps).
+
 ## [1.0.1] — 2026-08-11
 
 ### Added

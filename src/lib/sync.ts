@@ -118,7 +118,7 @@ export function remoteWins(local: VersionStamp, remote: VersionStamp): boolean {
 
 /* ---------- push / pull ---------- */
 
-interface WireFact {
+export interface WireFact {
   factId: string;
   factKind: string;
   content: string;
@@ -255,10 +255,11 @@ export async function pull(cfg: SyncConfig): Promise<PullResult> {
   return result;
 }
 
-async function applyRemoteFact(
+export async function applyRemoteFact(
   cfg: SyncConfig,
   wire: WireFact,
   opKind: string,
+  originMember: string | null = null,
 ): Promise<"applied" | "conflict" | "stale"> {
   const db = getDb();
   const local = db.prepare(`SELECT rowid, * FROM facts WHERE id = ?`).get(wire.factId) as
@@ -312,7 +313,8 @@ async function applyRemoteFact(
     db.prepare(
       `UPDATE facts SET kind = ?, content = ?, content_hash = ?, project = ?, updated_at = ?,
         pinned = ?, archived = ?, edited = 0, origin = 'sync', shared = MAX(shared, 1),
-        version = ?, synced_version = ?, origin_device = ? WHERE id = ?`,
+        version = ?, synced_version = ?, origin_device = ?, origin_member = COALESCE(?, origin_member)
+       WHERE id = ?`,
     ).run(
       wire.factKind,
       wire.content,
@@ -324,6 +326,7 @@ async function applyRemoteFact(
       wire.version,
       wire.version,
       wire.device,
+      originMember,
       wire.factId,
     );
     db.prepare(`DELETE FROM vec_facts WHERE rowid = ?`).run(BigInt(local.rowid));
@@ -340,8 +343,8 @@ async function applyRemoteFact(
   // New fact from a teammate — keep the team-global id.
   const info = db
     .prepare(
-      `INSERT INTO facts (id, kind, content, content_hash, source_turn_ids, project, created_at, updated_at, pinned, archived, edited, origin, shared, version, synced_version, origin_device)
-       VALUES (?, ?, ?, ?, '[]', ?, ?, ?, ?, ?, 0, 'sync', 1, ?, ?, ?)`,
+      `INSERT INTO facts (id, kind, content, content_hash, source_turn_ids, project, created_at, updated_at, pinned, archived, edited, origin, shared, version, synced_version, origin_device, origin_member)
+       VALUES (?, ?, ?, ?, '[]', ?, ?, ?, ?, ?, 0, 'sync', 1, ?, ?, ?, ?)`,
     )
     .run(
       wire.factId,
@@ -356,6 +359,7 @@ async function applyRemoteFact(
       wire.version,
       wire.version,
       wire.device,
+      originMember,
     );
   if (!archived) {
     const vec = await embedOne(wire.content.slice(0, 1500));
