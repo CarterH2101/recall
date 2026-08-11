@@ -97,7 +97,7 @@ export async function run(argv: string[]): Promise<void> {
       process.exit(1);
     }
     const me = arg(rest, "--me") ?? os.userInfo().username;
-    const cfg = await createTeamV2(server, arg(rest, "--name") ?? "team", me);
+    const cfg = await createTeamV2(server, arg(rest, "--name") ?? "team", me, arg(rest, "--token") ?? undefined);
     console.log(`Team created (${cfg.teamId}). You are the admin (${cfg.memberId}).`);
     console.log(`Config at ${syncConfigPath()} (mode 600) — the admin key lives there; backing it up is on you.\n`);
     const invite = await issueInvite(cfg);

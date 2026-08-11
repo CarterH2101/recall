@@ -120,7 +120,12 @@ function openName(cfg: TeamConfigV2, gen: number, memberId: string, nameEncB64: 
 
 /* ---------- create / invite / join ---------- */
 
-export async function createTeamV2(serverUrl: string, name: string, displayName: string): Promise<TeamConfigV2> {
+export async function createTeamV2(
+  serverUrl: string,
+  name: string,
+  displayName: string,
+  creationToken?: string,
+): Promise<TeamConfigV2> {
   const admin = generateMemberKeys();
   const teamId = randomUUID();
   const tk1 = newTeamKey();
@@ -164,7 +169,10 @@ export async function createTeamV2(serverUrl: string, name: string, displayName:
 
   const res = await fetch(`${serverUrl.replace(/\/$/, "")}/v1/teams`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: {
+      "Content-Type": "application/json",
+      ...(creationToken ? { Authorization: `Bearer ${creationToken}` } : {}),
+    },
     body: JSON.stringify({
       teamId,
       name,
