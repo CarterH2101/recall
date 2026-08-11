@@ -1,5 +1,6 @@
 import { getDb, vecBlob } from "./db.js";
 import { embed } from "./embed.js";
+import { redact } from "./redact.js";
 
 const MAX_CONTENT = 8000;
 const EMBED_CLIP = 1500;
@@ -44,7 +45,8 @@ export async function ingestGranolaMeetings(
 
   const write = db.transaction(() => {
     for (const m of meetings) {
-      const content = (m.content || "").slice(0, MAX_CONTENT).trim();
+      // Meetings can contain read-aloud credentials too — same gate as code.
+      const content = redact((m.content || "").slice(0, MAX_CONTENT).trim()).text;
       if (!content) continue;
       const sid = `granola:${m.id}`;
       upsertSession.run({ sid, ts: m.ts ?? null, title: m.title ?? null });

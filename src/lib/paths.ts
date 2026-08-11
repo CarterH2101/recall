@@ -24,6 +24,12 @@ export function claudeProjectsDir(): string {
   return path.join(os.homedir(), ".claude", "projects");
 }
 
+/** Where Codex CLI stores rollout session logs. Honors CODEX_HOME like Codex does. */
+export function codexSessionsDir(): string {
+  const home = process.env.CODEX_HOME || path.join(os.homedir(), ".codex");
+  return path.join(home, "sessions");
+}
+
 export function ensureDir(dir: string): void {
   fs.mkdirSync(dir, { recursive: true });
 }

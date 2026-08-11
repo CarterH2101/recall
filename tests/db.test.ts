@@ -10,9 +10,9 @@ const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "recall-test-"));
 process.env.RECALL_DB_PATH = path.join(tmp, "memory.db");
 
 test("fresh db migrates to current user_version with full schema", async () => {
-  const { getDb } = await import("../src/lib/db.js");
+  const { getDb, SCHEMA_VERSION } = await import("../src/lib/db.js");
   const db = getDb();
-  assert.equal(db.pragma("user_version", { simple: true }), 1);
+  assert.equal(db.pragma("user_version", { simple: true }), SCHEMA_VERSION);
   const names = db
     .prepare(`SELECT name FROM sqlite_master WHERE type = 'table'`)
     .all()

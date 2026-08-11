@@ -49,7 +49,12 @@ const MIGRATIONS: ((db: Database.Database) => void)[] = [
     CREATE VIRTUAL TABLE IF NOT EXISTS vec_turns
       USING vec0(embedding float[${DIM}] distance_metric=cosine);
   `),
+  /* v2 — secret redaction bookkeeping */
+  (db) => db.exec(`ALTER TABLE turns ADD COLUMN redaction_count INTEGER NOT NULL DEFAULT 0`),
 ];
+
+/** Current schema version — what a fully migrated db's user_version equals. */
+export const SCHEMA_VERSION = MIGRATIONS.length;
 
 function migrate(db: Database.Database): void {
   let v = db.pragma("user_version", { simple: true }) as number;

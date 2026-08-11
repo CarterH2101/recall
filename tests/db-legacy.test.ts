@@ -50,9 +50,11 @@ function buildLegacyDb(): void {
 
 test("legacy pre-versioning db migrates without data loss", async () => {
   buildLegacyDb();
-  const { getDb } = await import("../src/lib/db.js");
+  const { getDb, SCHEMA_VERSION } = await import("../src/lib/db.js");
   const db = getDb();
-  assert.equal(db.pragma("user_version", { simple: true }), 1);
+  assert.equal(db.pragma("user_version", { simple: true }), SCHEMA_VERSION);
+  // v2 column landed on the legacy table
+  assert.ok(db.prepare(`SELECT redaction_count FROM turns LIMIT 1`));
   assert.equal(db.prepare(`SELECT COUNT(*) AS n FROM sessions`).get()!["n" as never], 1);
   const turn = db.prepare(`SELECT * FROM turns WHERE id = 't1'`).get() as any;
   assert.equal(turn.content, "hello");

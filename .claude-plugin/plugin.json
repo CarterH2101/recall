@@ -1,6 +1,6 @@
 {
   "name": "recall",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Local-first memory for your coding agents: auto-injects relevant context from past sessions, adds a recall MCP search tool. Nothing leaves your machine. Run /recall:setup once after installing.",
   "author": {
     "name": "Carter Harris",

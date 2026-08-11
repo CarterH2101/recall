@@ -4,6 +4,30 @@ All notable changes to this project are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and versions follow
 [Semantic Versioning](https://semver.org/).
 
+## [0.2.0] — 2026-08-11
+
+Memory goes cross-agent, and secrets stop entering the database.
+
+### Added
+- **Codex CLI capture.** Rollout sessions under `~/.codex/sessions` are
+  parsed (formats 0.119→0.142 verified), watched live by the daemon
+  (recursive fs.watch, debounced, with a polling fallback and a 7-day
+  catch-up sweep on startup), and backfillable via
+  `recalld backfill --source codex|all`. Ask Claude Code what you did in
+  Codex last week — it knows now.
+- **Secret redaction on ingest.** ~20 high-precision rules (AWS, GitHub,
+  OpenAI, Anthropic, Slack, Stripe, PEM blocks, JWTs, connection-string
+  passwords, entropy-gated generic assignments) run before storage — and
+  therefore before embedding. Custom patterns via `~/.recall/config.json`.
+  `recalld redact --dry-run|--backfill` retro-cleans existing databases,
+  re-embeds affected rows, and truncates WAL + VACUUMs so plaintext doesn't
+  linger in freed pages.
+- Source-adapter interface (`src/lib/sources/`) — new capture sources are one
+  file; per-source enable/disable in config. Existing claude-code turn ids
+  unchanged (verified: full cursor-less re-read of a production database
+  inserts zero duplicates).
+- Migration v2: `turns.redaction_count`.
+
 ## [0.1.0] — 2026-08-11
 
 First published release as `recalld` on npm.

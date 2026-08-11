@@ -4,6 +4,8 @@ import { warmup } from "../lib/embed.js";
 import { ingest } from "../lib/ingest.js";
 import { recall, recentSessions, type Snippet } from "../lib/recall.js";
 import { getOrCreateToken } from "../lib/token.js";
+import { getAdapter } from "../lib/sources/registry.js";
+import { startWatchers } from "./watcher.js";
 import { SERVICE, VERSION } from "../lib/version.js";
 import {
   writeDaemonInfo,
@@ -116,7 +118,9 @@ function makeHandler(token: string, port: number) {
       if (req.method === "POST" && req.url === "/ingest") {
         const b = await readBody(req);
         if (!b.transcriptPath) return json(res, 400, { error: "transcriptPath required" });
-        return json(res, 200, await ingest(b.transcriptPath));
+        const adapter = getAdapter(b.source ?? "claude-code");
+        if (!adapter) return json(res, 400, { error: `unknown source: ${b.source}` });
+        return json(res, 200, await ingest(b.transcriptPath, adapter));
       }
       if (req.method === "POST" && req.url === "/recall") {
         const b = await readBody(req);
@@ -253,6 +257,10 @@ export async function startDaemon(): Promise<void> {
   console.error("[recalld] warming embedding model...");
   await warmup();
   console.error("[recalld] model ready");
+
+  // Watch push-less sources (Codex rollouts). After warmup so the catch-up
+  // sweep doesn't race the model download.
+  startWatchers();
 }
 
 startDaemon().catch((e) => {

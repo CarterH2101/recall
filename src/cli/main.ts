@@ -21,7 +21,8 @@ Usage: recalld <command> [options]
   uninstall        Remove hooks, shims, autostart, runtime (--purge: data too)
   autostart on|off Start the daemon at login (schtasks/launchd/systemd)
 
-  backfill         Index existing transcripts
+  backfill         Index existing transcripts (--source claude-code|codex|all)
+  redact           Retro-clean secrets from stored turns (--dry-run|--backfill)
   mcp              Run the MCP stdio server
   install-hooks    (Re)register Claude Code hooks only
   reproject        Recompute project labels after config changes
@@ -83,6 +84,10 @@ async function main(): Promise<void> {
     case "install-hooks": {
       const m = await import("./install-hooks.js");
       return m.run();
+    }
+    case "redact": {
+      const m = await import("./redact-backfill.js");
+      return m.run(rest);
     }
     case "backfill":
       return forward("backfill.js", rest);

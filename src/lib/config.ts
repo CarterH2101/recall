@@ -12,8 +12,19 @@ export interface ProjectRoot {
   label: string;
 }
 
+export interface SourceConfig {
+  enabled?: boolean;
+}
+
+export interface RedactionConfig {
+  enabled: boolean;
+  customPatterns: { id: string; pattern: RegExp }[];
+}
+
 export interface Config {
   projectRoots: ProjectRoot[];
+  sources: Record<string, SourceConfig>;
+  redaction: RedactionConfig;
 }
 
 /** Normalize a path for prefix comparison: forward slashes, no trailing slash, lowercased. */
@@ -48,6 +59,8 @@ let _cache: Config | null = null;
 export function loadConfig(): Config {
   if (_cache) return _cache;
   let fileRoots: ProjectRoot[] = [];
+  let sources: Record<string, SourceConfig> = {};
+  const redaction: RedactionConfig = { enabled: true, customPatterns: [] };
   try {
     const file = path.join(dataDir(), "config.json");
     const raw = JSON.parse(fs.readFileSync(file, "utf8"));
@@ -56,13 +69,31 @@ export function loadConfig(): Config {
         .filter((r: any) => r && typeof r.root === "string" && typeof r.label === "string")
         .map((r: any) => ({ root: normPath(r.root), label: r.label }));
     }
+    if (raw?.sources && typeof raw.sources === "object") {
+      for (const [name, v] of Object.entries<any>(raw.sources)) {
+        if (v && typeof v === "object") sources[name] = { enabled: v.enabled !== false };
+      }
+    }
+    if (raw?.redaction && typeof raw.redaction === "object") {
+      if (raw.redaction.enabled === false) redaction.enabled = false;
+      if (Array.isArray(raw.redaction.customPatterns)) {
+        for (const p of raw.redaction.customPatterns) {
+          if (!p || typeof p.id !== "string" || typeof p.pattern !== "string") continue;
+          try {
+            redaction.customPatterns.push({ id: `custom:${p.id}`, pattern: new RegExp(p.pattern, "g") });
+          } catch (e) {
+            console.error(`[recall] ignoring invalid custom redaction pattern "${p.id}": ${(e as Error).message}`);
+          }
+        }
+      }
+    }
   } catch {
     // no config file, or unreadable — fall back to env / defaults
   }
   const envRoots = parseEnvRoots(process.env.RECALL_PROJECT_ROOTS);
   // env entries win on conflict; longest root first so the most specific match applies.
   const merged = [...fileRoots, ...envRoots].sort((a, b) => b.root.length - a.root.length);
-  _cache = { projectRoots: merged };
+  _cache = { projectRoots: merged, sources, redaction };
   return _cache;
 }
 

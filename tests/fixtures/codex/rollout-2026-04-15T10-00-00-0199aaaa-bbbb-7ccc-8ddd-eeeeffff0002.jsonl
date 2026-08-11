@@ -1,0 +1,5 @@
+{"timestamp":"2026-04-15T15:00:00.100Z","type":"session_meta","payload":{"id":"0199aaaa-bbbb-7ccc-8ddd-eeeeffff0002","timestamp":"2026-04-15T15:00:00.000Z","cwd":"/home/dev/projects/api","originator":"Codex Desktop","cli_version":"0.119.0-alpha.11","source":"vscode","model_provider":"openai","base_instructions":{"text":"You are Codex. NEVER-STORE-MARKER."}}}
+{"timestamp":"2026-04-15T15:00:02.000Z","type":"response_item","payload":{"type":"message","role":"user","content":[{"type":"input_text","text":"add retry with exponential backoff to the webhook sender"}]}}
+{"timestamp":"2026-04-15T15:00:08.000Z","type":"response_item","payload":{"type":"message","role":"assistant","content":[{"type":"output_text","text":"Added retry with jittered exponential backoff (base 500ms, cap 30s, 5 attempts) in webhook/sender.ts; 4xx responses are not retried."}]}}
+not-json drift line that must be skipped silently
+{"timestamp":"2026-04-15T15:00:09.000Z","type":"response_item","payload":{"type":"message","role":"user","content":[{"type":"input_text","text":"<user_instructions>injected instructions INJECT-MARKER</user_instructions>"}]}}
