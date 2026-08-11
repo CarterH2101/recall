@@ -16,7 +16,7 @@ import {
 } from "../lib/facts.js";
 
 // Local admin UI. Everything here — including reads — is LOCALHOST ONLY,
-// even with a valid bearer token: the token exists for the Siri /ask path,
+// even with a valid bearer token: the token exists for the remote /ask path,
 // not remote administration.
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));

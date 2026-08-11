@@ -1,6 +1,6 @@
 # recall
 
-**Local-first memory for your coding agents — cross-session, cross-agent, and voice-accessible via Siri.**
+**Local-first memory for your coding agents — cross-session and cross-agent.**
 
 Your AI coding sessions are full of decisions, approaches, and answers that
 evaporate the moment the session ends. `recall` captures your **Claude Code
@@ -11,9 +11,8 @@ and Codex CLI** sessions, indexes them **entirely on your own machine**, and:
 - **redacts secrets** before anything is stored or embedded,
 - **distills** durable facts (decisions, gotchas, conventions) out of raw
   history and ranks them first,
-- gives any agent an explicit **`recall` MCP tool** ("what did I conclude
-  about X?"),
-- and answers **by voice from your iPhone**: *"Hey Siri, Ask Recall."*
+- and gives any agent an explicit **`recall` MCP tool** ("what did I conclude
+  about X?").
 
 **Nothing ever leaves your machine.** Storage, embeddings, and search are all
 local. No cloud, no account, no API key. Your transcripts already sit on your
@@ -61,11 +60,10 @@ Claude Code ──Stop hook──────────► recalld (local daem
             ──UserPromptSubmit────►   • warm local embedding model
                   │                    • SQLite + sqlite-vec (one file: ~/.recall/memory.db)
                   ▼                    • secret redaction before storage
-        injected context               • /ingest /recall /ask /ui
-                                     ▲               ▲            ▲
- Codex CLI ── rollout watcher ───────┘               │            │
- Any agent ── stdio MCP ─────────────────────────────┘            │
-                            iPhone ── Siri Shortcut ── /ask ──────┘
+        injected context               • /ingest /recall /ui
+                                     ▲               ▲
+ Codex CLI ── rollout watcher ───────┘               │
+ Any agent ── stdio MCP ─────────────────────────────┘
 ```
 
 - **Auto-recall on every prompt.** A `UserPromptSubmit` hook vector-searches
@@ -95,9 +93,6 @@ Claude Code ──Stop hook──────────► recalld (local daem
 - **Self-healing daemon.** Identity handshake, automatic port fallback when
   something else holds 4319, stale-version replacement after upgrades, and
   `recalld doctor` when you want receipts.
-- **Siri voice access.** A 3-minute Shortcut setup lets you ask your memory
-  from anywhere — see **[docs/siri.md](docs/siri.md)**. Phone↔computer over
-  your own LAN or Tailscale; token-authed; still no cloud.
 
 ## CLI
 
@@ -126,12 +121,12 @@ These are read from the real process environment (nothing loads `.env` —
 |-----|---------|---------|
 | `RECALL_DB_PATH` | `~/.recall/memory.db` | DB file location |
 | `RECALL_PORT` | `4319` | Daemon port (falls back to 4320+ if occupied) |
-| `RECALL_BIND` | `127.0.0.1` | Set `0.0.0.0` to allow phone access (token required) |
+| `RECALL_BIND` | `127.0.0.1` | Set `0.0.0.0` to allow LAN/remote clients (token required) |
 | `RECALL_MODEL` | `Xenova/bge-small-en-v1.5` | Local embedding model |
 | `RECALL_MODEL_DIR` | `~/.recall/models` | Model cache location |
 | `RECALL_ENABLED` | `true` | Set `false` to instantly disable auto-inject |
 | `RECALL_MIN_SCORE` | `0.75` | Min similarity for auto-injected snippets |
-| `RECALL_ASK_MIN_SCORE` | `0.45` | Min similarity for Siri `/ask` answers |
+| `RECALL_ASK_MIN_SCORE` | `0.45` | Min similarity for the daemon's `/ask` short-answer endpoint |
 | `RECALL_PROJECT_ROOTS` | — | `path=label;path=label` cwd→project mapping (also `~/.recall/config.json`) |
 | `RECALL_DISTILL_CMD` | auto-detects `claude -p` | Local summarizer command for `recalld distill` (any stdin→JSON CLI, e.g. ollama) |
 | `RECALL_DEBUG` | — | `1` for daemon request logging (metadata only) |
@@ -157,10 +152,10 @@ Your memory database is kept unless you pass `--purge`.
   never stored.
 - Embeddings run in-process with a local model (one-time download from
   Hugging Face into `~/.recall/models`; after that the network is never used).
-- The daemon binds localhost by default. If you opt into `RECALL_BIND=0.0.0.0`
-  for Siri, non-localhost requests require a bearer token — and the viewer
-  plus its admin API stay localhost-only even with the token. Tailscale keeps
-  phone traffic end-to-end encrypted between your own devices.
+- The daemon binds localhost by default. If you opt into `RECALL_BIND=0.0.0.0`,
+  non-localhost requests require a bearer token — and the viewer plus its
+  admin API stay localhost-only even with the token. Use Tailscale if you
+  expose it beyond the machine.
 - Transcripts can contain secrets, so recall redacts them **before** storage
   and embedding (they never enter the database or the vector index), and the
   same rules hard-gate anything you share via team sync. Databases created

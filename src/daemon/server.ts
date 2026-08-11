@@ -18,7 +18,7 @@ import {
 const BASE_PORT = Number(process.env.RECALL_PORT || 4319);
 const PORT_TRIES = 10;
 // Default: localhost only. Set RECALL_BIND=0.0.0.0 to allow LAN/Tailscale
-// clients (e.g. the Siri shortcut) — those requests must present the token.
+// clients — those requests must present the token.
 const HOST = process.env.RECALL_BIND || "127.0.0.1";
 
 const ASK_MIN_SCORE = Number(process.env.RECALL_ASK_MIN_SCORE ?? "0.45");
@@ -179,9 +179,8 @@ function makeHandler(token: string, port: number) {
         logInjection(b.source ?? "mcp", b, snippets);
         return json(res, 200, { snippets });
       }
-      // Voice-friendly Q&A for the Siri shortcut. Accepts POST {q} OR GET /ask?q=...
-      // GET matters: iOS Shortcuts can drop POST-with-body over HTTP/2 ("the
-      // network connection was lost"), while GET works reliably.
+      // Short plain-text Q&A endpoint. Accepts POST {q} OR GET /ask?q=... —
+      // GET exists because some HTTP clients drop POST bodies over HTTP/2.
       if (req.url === "/ask" || req.url?.startsWith("/ask?")) {
         let q: string | undefined;
         if (req.method === "POST") {

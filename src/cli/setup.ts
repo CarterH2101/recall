@@ -127,7 +127,7 @@ Done. Your agent now has memory.
   DB:        ${dbPath()}
   Runtime:   ${appDir()}
   Daemon:    http://127.0.0.1:${daemonPort()}
-  API token: ${token}   (only needed for non-localhost clients, e.g. the Siri shortcut)
+  API token: ${token}   (only needed for non-localhost clients)
 
 Next:
   - Restart your Claude Code sessions to activate the hooks.
@@ -135,7 +135,6 @@ Next:
   - recalld autostart on              — start the daemon at login (optional)
   - Optional: register the MCP server in other agents:
       node "${runtimeEntry("dist", "mcp", "server.js").replace(/\\/g, "/")}"
-  - Optional: voice access via Siri — see docs/siri.md
   - Kill switch: set RECALL_ENABLED=false to disable auto-inject.
 `);
   // No process.exit here: the detached daemon child is unref'd, so the

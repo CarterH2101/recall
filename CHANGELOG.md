@@ -52,7 +52,8 @@ Your memory has a face now.
   appends to `~/.recall/eval/labels.jsonl` — closing the eval loop), Stats
   (turns/day chart, source breakdown, hook injection rate).
 - The viewer and its `/api/*` routes are **localhost-only even with a valid
-  bearer token** — the token exists for Siri, not remote administration.
+  bearer token** — the token exists for remote `/ask` clients, not remote
+  administration.
 
 ## [0.4.0] — 2026-08-11
 
@@ -170,6 +171,6 @@ Initial clone-install beta.
 - Local embedding (bge-small-en-v1.5 via transformers.js), SQLite + sqlite-vec.
 - Q+A retrieval units, self-reference penalty, one-snippet-per-session dedup.
 - MCP tools `recall` and `recent_sessions`.
-- Siri voice access via daemon `/ask`.
+- Short plain-text answers via the daemon's `/ask` endpoint.
 - Granola meetings as a second memory source.
 - Project-root config, junk pruning, re-projection CLIs.
