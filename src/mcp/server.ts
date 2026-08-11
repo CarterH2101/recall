@@ -27,8 +27,11 @@ server.setRequestHandler(ListToolsRequestSchema, async () => ({
     {
       name: "recall",
       description:
-        "Search your own past AI coding sessions (across projects) for relevant context. " +
-        "Use when you need to remember a prior decision, approach, or detail you worked on before.",
+        "Search the user's past AI coding sessions (raw transcripts, all projects, local index). " +
+        "Use when resuming prior work, or when you need a detail curated memory files don't hold: " +
+        "an exact error message, a command or query that worked, a decision made in a one-off session. " +
+        "Results are Q+A units (matched turn paired with its reply) with date, project, and score. " +
+        "Try it before saying you don't remember something the user says happened before.",
       inputSchema: {
         type: "object",
         properties: {

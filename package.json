@@ -8,14 +8,19 @@
     "recalld": "dist/daemon/server.js",
     "recall-mcp": "dist/mcp/server.js",
     "recall-backfill": "dist/cli/backfill.js",
-    "recall-install-hooks": "dist/cli/install-hooks.js"
+    "recall-install-hooks": "dist/cli/install-hooks.js",
+    "recall-reproject": "dist/cli/reproject.js",
+    "recall-prune-noise": "dist/cli/prune-noise.js",
+    "recall-ingest-granola": "dist/cli/ingest-granola.js"
   },
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "setup": "npm run build && node dist/cli/setup.js",
     "daemon": "node dist/daemon/server.js",
     "backfill": "node dist/cli/backfill.js",
-    "install-hooks": "node dist/cli/install-hooks.js"
+    "install-hooks": "node dist/cli/install-hooks.js",
+    "reproject": "node dist/cli/reproject.js",
+    "ingest-granola": "node dist/cli/ingest-granola.js"
   },
   "dependencies": {
     "@huggingface/transformers": "^3.3.3",

@@ -3,6 +3,7 @@ import { getDb, vecBlob } from "./db.js";
 import { embed } from "./embed.js";
 import { parseLine, type Turn, type SessionMeta } from "./transcript.js";
 import { getOffset, setOffset } from "./cursor.js";
+import { isLowSignal } from "./signal.js";
 
 const EMBED_CLIP = 1500;
 
@@ -81,7 +82,9 @@ export async function ingest(transcriptPath: string): Promise<IngestResult> {
     for (const t of turns) {
       ensureSession.run(t.sessionId);
       const info = insertTurn.run(t);
-      if (info.changes === 1) {
+      // Low-signal turns are stored (so neighbors can expand into them at
+      // recall time) but never embedded — they can't surface as matches.
+      if (info.changes === 1 && !isLowSignal(t.role, t.content)) {
         newRows.push({ rowid: BigInt(info.lastInsertRowid), content: t.content });
       }
     }

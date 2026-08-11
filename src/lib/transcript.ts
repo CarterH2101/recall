@@ -21,16 +21,27 @@ export interface ParsedLine {
   turn: Turn | null;
 }
 
+import { loadConfig, normPath } from "./config.js";
+
 const MAX_CONTENT = 8000;
 
 function clip(s: string, n: number): string {
   return s.length > n ? s.slice(0, n) : s;
 }
 
-function deriveProject(cwd: string | null | undefined): string | null {
+/**
+ * Map a session's cwd to a project label. If the cwd falls under a configured
+ * project root (see config.ts / RECALL_PROJECT_ROOTS), it collapses to that
+ * root's label so many code subfolders share one memory bucket. Otherwise the
+ * label is the cwd's basename.
+ */
+export function deriveProject(cwd: string | null | undefined): string | null {
   if (!cwd) return null;
-  const norm = cwd.replace(/[\\/]+$/, "");
-  const base = norm.split(/[\\/]/).pop();
+  const norm = normPath(cwd);
+  for (const { root, label } of loadConfig().projectRoots) {
+    if (norm === root || norm.startsWith(root + "/")) return label;
+  }
+  const base = cwd.replace(/[\\/]+$/, "").split(/[\\/]/).pop();
   return base || null;
 }
 

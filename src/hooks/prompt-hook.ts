@@ -6,10 +6,13 @@ import { recallRemote } from "../daemon/client.js";
 // prompt, even if the daemon is down or the network is off.
 
 const ENABLED = (process.env.RECALL_ENABLED ?? "true") !== "false";
-const MIN_SCORE = Number(process.env.RECALL_MIN_SCORE ?? "0.4");
+// Inject only strong matches. Weak-to-mid scores (0.6-0.72) are reaches that
+// read as noise; below this bar the hook stays silent and the recall MCP tool
+// is the pull-based path instead.
+const MIN_SCORE = Number(process.env.RECALL_MIN_SCORE ?? "0.75");
 const LIMIT = 3;
-const MAX_CHARS = 1500;
-const SNIPPET_CHARS = 500;
+const MAX_CHARS = 2000;
+const SNIPPET_CHARS = 700;
 
 // Hard backstop: whatever happens, this process exits within 1.5s.
 setTimeout(() => process.exit(0), 1500).unref();
