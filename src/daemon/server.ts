@@ -4,6 +4,7 @@ import { warmup } from "../lib/embed.js";
 import { ingest } from "../lib/ingest.js";
 import { recall, recentSessions, type Snippet } from "../lib/recall.js";
 import { getOrCreateToken } from "../lib/token.js";
+import { redact } from "../lib/redact.js";
 import { getAdapter } from "../lib/sources/registry.js";
 import { startWatchers } from "./watcher.js";
 import { handleUiRoute } from "./ui-routes.js";
@@ -83,7 +84,8 @@ const DEBUG = process.env.RECALL_DEBUG === "1";
 
 // What recall actually surfaced, per query — feeds the eval-labeling loop and
 // the viewer's activity feed. Zero-result calls are logged too (miss rate is
-// a metric). Never allowed to fail a recall.
+// a metric). Never allowed to fail a recall. Queries are raw prompt text and
+// can carry secrets just like turns — same redaction gate before storage.
 function logInjection(source: string, req: any, snippets: Snippet[]): void {
   try {
     getDb()
@@ -94,7 +96,7 @@ function logInjection(source: string, req: any, snippets: Snippet[]): void {
       .run(
         new Date().toISOString(),
         source,
-        String(req.query).slice(0, 2000),
+        redact(String(req.query).slice(0, 2000)).text,
         req.excludeSessionId ?? null,
         req.project ?? null,
         req.minScore ?? null,

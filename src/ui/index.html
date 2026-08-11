@@ -6,195 +6,381 @@
 <title>recall</title>
 <style>
   :root {
-    --bg: #f6f7f9; --surface: #ffffff; --border: #e3e6ea;
-    --ink: #1a2028; --ink-2: #5b6572; --ink-3: #8b95a2;
-    --accent: #2563eb; --accent-soft: #dbe7fd;
-    --good: #14803c; --warn: #b45309;
-    --mono: ui-monospace, "Cascadia Code", Consolas, monospace;
+    --paper:   oklch(96.5% 0.007 85);
+    --surface: oklch(98.6% 0.004 85);
+    --ink:     oklch(24% 0.015 75);
+    --ink-2:   oklch(44% 0.012 75);
+    --ink-3:   oklch(58% 0.01 78);
+    --rule:    oklch(89% 0.008 85);
+    --accent:  oklch(56% 0.14 55);
+    --k-decision:   oklch(56% 0.14 55);
+    --k-gotcha:     oklch(54% 0.13 30);
+    --k-preference: oklch(52% 0.09 310);
+    --k-reference:  oklch(52% 0.10 150);
+    --mono: ui-monospace, "Cascadia Mono", Consolas, monospace;
+    --sans: system-ui, "Segoe UI", -apple-system, sans-serif;
+    --ease: cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --paper:   oklch(21% 0.012 75);
+      --surface: oklch(24.5% 0.012 75);
+      --ink:     oklch(90% 0.008 85);
+      --ink-2:   oklch(72% 0.01 80);
+      --ink-3:   oklch(56% 0.01 78);
+      --rule:    oklch(31% 0.012 75);
+      --accent:  oklch(74% 0.12 62);
+      --k-decision:   oklch(74% 0.12 62);
+      --k-gotcha:     oklch(70% 0.13 32);
+      --k-preference: oklch(72% 0.09 310);
+      --k-reference:  oklch(70% 0.10 150);
+    }
   }
   * { box-sizing: border-box; }
-  body { margin: 0; background: var(--bg); color: var(--ink);
-         font: 14px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif; }
-  header { display: flex; align-items: baseline; gap: 16px; padding: 14px 20px;
-           background: var(--surface); border-bottom: 1px solid var(--border); }
-  header h1 { font-size: 16px; margin: 0; }
-  header .sub { color: var(--ink-3); font-size: 12px; }
-  nav { display: flex; gap: 2px; margin-left: auto; }
-  nav button { border: 0; background: none; padding: 6px 12px; border-radius: 6px;
-               font: inherit; color: var(--ink-2); cursor: pointer; }
-  nav button.active { background: var(--accent-soft); color: var(--accent); font-weight: 600; }
-  main { max-width: 1060px; margin: 20px auto; padding: 0 20px; }
-  .tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px; margin-bottom: 16px; }
-  .tile { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 12px 14px; }
-  .tile .v { font-size: 22px; font-weight: 650; letter-spacing: -0.02em; }
-  .tile .k { color: var(--ink-3); font-size: 12px; }
-  .card { background: var(--surface); border: 1px solid var(--border); border-radius: 8px;
-          padding: 16px; margin-bottom: 16px; overflow-x: auto; }
-  .card h2 { font-size: 13px; margin: 0 0 10px; color: var(--ink-2); font-weight: 600;
-             text-transform: uppercase; letter-spacing: 0.04em; }
+  html { background: var(--paper); }
+  body {
+    margin: 0; background: var(--paper); color: var(--ink);
+    font: 14px/1.55 var(--sans);
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* ---------- header ---------- */
+  header {
+    display: flex; align-items: baseline; gap: 20px;
+    max-width: 1080px; margin: 0 auto; padding: 26px 24px 0;
+  }
+  .wordmark { font: 600 16px/1 var(--mono); letter-spacing: -0.01em; }
+  .wordmark::after {
+    content: ""; display: inline-block; width: 7px; height: 13px;
+    background: var(--accent); margin-left: 3px; transform: translateY(1px);
+  }
+  #db-path {
+    font: 11px/1 var(--mono); color: var(--ink-3);
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    max-width: 34ch; direction: rtl;
+  }
+  nav { display: flex; gap: 22px; margin-left: auto; }
+  nav a {
+    font: 500 11px/1 var(--mono); letter-spacing: 0.08em; text-transform: uppercase;
+    color: var(--ink-3); text-decoration: none; cursor: pointer;
+    padding: 6px 1px 10px; border-bottom: 2px solid transparent;
+    transition: color 150ms var(--ease), border-color 150ms var(--ease);
+  }
+  nav a:hover { color: var(--ink); }
+  nav a.active { color: var(--ink); border-bottom-color: var(--accent); }
+  nav a:focus-visible, .act:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible {
+    outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 1px;
+  }
+  .headrule { max-width: 1080px; margin: 0 auto; padding: 0 24px; }
+  .headrule hr { border: 0; border-top: 1px solid var(--rule); margin: 0; }
+
+  main { max-width: 1080px; margin: 0 auto; padding: 26px 24px 60px; }
+  .view { animation: arrive 200ms var(--ease); }
+  @keyframes arrive { from { opacity: 0; transform: translateY(5px); } }
+  @media (prefers-reduced-motion: reduce) {
+    * { animation: none !important; transition: none !important; }
+  }
+
+  /* ---------- primitives ---------- */
+  .label {
+    font: 500 10.5px/1 var(--mono); letter-spacing: 0.08em;
+    text-transform: uppercase; color: var(--ink-3);
+  }
+  .mono  { font-family: var(--mono); font-size: 12px; }
+  .dim   { color: var(--ink-3); }
+  .quiet { color: var(--ink-2); }
+  a.link { color: var(--accent); text-decoration: none; cursor: pointer; }
+  a.link:hover { text-decoration: underline; text-underline-offset: 3px; }
+
+  section { margin-bottom: 38px; }
+  section > .label { display: block; margin-bottom: 14px; }
+
   table { border-collapse: collapse; width: 100%; }
-  th { text-align: left; color: var(--ink-3); font-size: 12px; font-weight: 500; padding: 4px 10px 6px 0; }
-  td { padding: 6px 10px 6px 0; border-top: 1px solid var(--border); vertical-align: top; }
-  .mono { font-family: var(--mono); font-size: 12px; }
-  .dim { color: var(--ink-3); }
-  .pill { display: inline-block; padding: 1px 8px; border-radius: 999px; font-size: 11px;
-          background: var(--accent-soft); color: var(--accent); font-weight: 600; }
-  .pill.k-gotcha { background: #fdeeda; color: #b45309; }
-  .pill.k-decision { background: #dbe7fd; color: #2563eb; }
-  .pill.k-preference { background: #e5e0fb; color: #6d28d9; }
-  .pill.k-reference { background: #d8f0e0; color: #14803c; }
-  input[type=text], select, textarea { font: inherit; padding: 7px 10px; border: 1px solid var(--border);
-          border-radius: 6px; background: var(--surface); color: var(--ink); }
-  input[type=text] { width: 100%; }
-  button.act { font: inherit; font-size: 12px; padding: 4px 10px; border-radius: 6px; cursor: pointer;
-               border: 1px solid var(--border); background: var(--surface); color: var(--ink-2); }
-  button.act:hover { border-color: var(--accent); color: var(--accent); }
-  .row { display: flex; gap: 8px; align-items: center; margin-bottom: 12px; flex-wrap: wrap; }
-  .snip { white-space: pre-wrap; word-break: break-word; }
-  .score { font-family: var(--mono); font-size: 12px; color: var(--ink-2); }
-  #chart svg { display: block; width: 100%; }
-  .bar { fill: var(--accent); }
-  .bar:hover { fill: #1d4ed8; }
-  .empty { color: var(--ink-3); padding: 20px 0; text-align: center; }
-  a { color: var(--accent); text-decoration: none; cursor: pointer; }
+  th { text-align: left; padding: 0 14px 8px 0; font-weight: 500; }
+  th.label { font-size: 10.5px; }
+  td { padding: 9px 14px 9px 0; border-top: 1px solid var(--rule); vertical-align: baseline; }
+  tr.rowlink { cursor: pointer; transition: background 150ms var(--ease); }
+  tr.rowlink:hover td { background: var(--surface); }
+
+  .act {
+    font: 500 11.5px/1 var(--mono); color: var(--ink-2);
+    background: transparent; border: 1px solid var(--rule); border-radius: 3px;
+    padding: 4px 9px; cursor: pointer;
+    transition: color 150ms var(--ease), border-color 150ms var(--ease);
+  }
+  .act:hover { color: var(--accent); border-color: var(--accent); }
+  .act:disabled { color: color-mix(in oklch, var(--ink-3) 45%, transparent); border-color: var(--rule); cursor: default; }
+
+  input[type=text], select, textarea {
+    font: 13px/1.5 var(--sans); color: var(--ink);
+    background: var(--surface); border: 1px solid var(--rule); border-radius: 3px;
+    padding: 9px 12px; transition: border-color 150ms var(--ease);
+  }
+  input[type=text]:hover, textarea:hover, select:hover { border-color: var(--ink-3); }
+
+  .kind { font: 500 11.5px/1 var(--mono); white-space: nowrap; }
+  .kind::before {
+    content: ""; display: inline-block; width: 7px; height: 7px; border-radius: 50%;
+    margin-right: 6px; transform: translateY(-1px); background: var(--ink-3);
+  }
+  .kind.decision::before   { background: var(--k-decision); }
+  .kind.gotcha::before     { background: var(--k-gotcha); }
+  .kind.preference::before { background: var(--k-preference); }
+  .kind.reference::before  { background: var(--k-reference); }
+
+  .empty { color: var(--ink-2); padding: 26px 0; }
+  .empty .mono { color: var(--ink); }
+
+  /* ---------- stats ledger ---------- */
+  .ledger {
+    display: flex; flex-wrap: wrap; border-top: 1px solid var(--rule);
+    border-bottom: 1px solid var(--rule); margin-bottom: 38px;
+  }
+  .ledger > div {
+    flex: 1 1 auto; padding: 16px 22px 16px 0; min-width: 108px;
+  }
+  .ledger > div + div { padding-left: 22px; border-left: 1px solid var(--rule); }
+  .ledger .n { font: 500 19px/1.2 var(--mono); letter-spacing: -0.01em; }
+  .ledger .label { display: block; margin-top: 5px; }
+
+  svg.chart { display: block; max-width: 100%; height: auto; }
+  .bar { fill: var(--accent); fill-opacity: 0.85; transition: fill-opacity 150ms var(--ease); }
+  .bar:hover { fill-opacity: 1; }
+  .axis { font: 10px var(--mono); fill: var(--ink-3); }
+
+  /* ---------- search ---------- */
+  #q { width: 100%; font-size: 15px; padding: 12px 14px; }
+  .hint { font: 11px var(--mono); color: var(--ink-3); margin: 8px 2px 0; }
+  .result { padding: 16px 0; border-top: 1px solid var(--rule); }
+  .result:first-child { border-top: 0; }
+  .result .meta { display: flex; gap: 14px; align-items: baseline; margin-bottom: 6px; }
+  .snip { white-space: pre-wrap; word-break: break-word; color: var(--ink-2); }
+  .result .snip { color: var(--ink); }
+  .score { font: 12px var(--mono); color: var(--ink-3); }
+
+  /* ---------- facts ---------- */
+  .addrow { display: flex; gap: 10px; margin-bottom: 22px; }
+  .addrow input { flex: 1; }
+  .fact-content { max-width: 58ch; }
+  .editbox { width: 100%; min-height: 72px; font-family: var(--sans); resize: vertical; }
+  .editactions { display: flex; gap: 8px; margin-top: 8px; }
+  .flag { color: var(--accent); font-family: var(--mono); }
+
+  @media (max-width: 720px) {
+    header { flex-wrap: wrap; row-gap: 10px; }
+    nav { width: 100%; margin-left: 0; gap: 16px; }
+    #db-path { display: none; }
+    .ledger > div { min-width: 33%; border-left: 0 !important; padding-left: 0 !important; }
+    td, th { padding-right: 10px; }
+  }
 </style>
 </head>
 <body>
 <header>
-  <h1>🧠 recall</h1>
-  <span class="sub" id="daemon-info">local memory console</span>
+  <span class="wordmark">recall</span>
+  <span id="db-path" class="mono"></span>
   <nav id="tabs"></nav>
 </header>
+<div class="headrule"><hr></div>
 <main id="main"></main>
+
 <script>
-const $ = (s, el=document) => el.querySelector(s);
+const $ = (s, el = document) => el.querySelector(s);
 const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 const api = async (path, opts) => {
   const r = await fetch(path, opts ? { headers: {"Content-Type":"application/json"}, ...opts } : undefined);
-  if (!r.ok) throw new Error((await r.json().catch(()=>({}))).error ?? r.status);
+  if (!r.ok) throw new Error((await r.json().catch(() => ({}))).error ?? r.status);
   return r.json();
 };
+const fmtDay = (ts) => (ts ?? "").slice(0, 10);
+const fmtWhen = (ts) => (ts ?? "").slice(0, 16).replace("T", " ");
 
 const TABS = { search: "Search", sessions: "Sessions", facts: "Facts", activity: "Activity", stats: "Stats" };
 let tab = location.hash.slice(1) || "stats";
+if (!TABS[tab]) tab = "stats";
 
 function renderTabs() {
-  $("#tabs").innerHTML = Object.entries(TABS).map(([k, label]) =>
-    `<button class="${k === tab ? "active" : ""}" onclick="go('${k}')">${label}</button>`).join("");
+  $("#tabs").innerHTML = Object.entries(TABS)
+    .map(([k, label]) => `<a class="${k === tab ? "active" : ""}" onclick="go('${k}')" tabindex="0">${label}</a>`)
+    .join("");
 }
 window.go = (t) => { tab = t; location.hash = t; renderTabs(); views[t](); };
+window.addEventListener("hashchange", () => {
+  const t = location.hash.slice(1);
+  if (TABS[t] && t !== tab) { tab = t; renderTabs(); views[t](); }
+});
+const mount = (html) => { $("#main").innerHTML = `<div class="view">${html}</div>`; };
 
 const views = {};
 
-/* ---------- stats ---------- */
+/* ---------------- stats ---------------- */
 views.stats = async () => {
   const s = await api("/api/stats");
-  const tiles = [
-    [s.turns.toLocaleString(), "turns captured"],
+  $("#db-path").textContent = s.dbPath;
+  const inj = s.hookLast7d;
+  const injRate = inj.recalls ? Math.round((100 * inj.injecting) / inj.recalls) + "%" : "–";
+
+  const figures = [
+    [s.turns.toLocaleString(), "turns"],
     [s.embedded.toLocaleString(), "embedded"],
     [s.sessions.toLocaleString(), "sessions"],
-    [s.facts, "facts"],
-    [s.dbSizeMb + " MB", "database"],
-    [s.redactedTurns, "turns redacted"],
-    [s.hookLast7d.recalls, "hook recalls · 7d"],
-    [s.hookLast7d.recalls ? Math.round(100 * s.hookLast7d.injecting / s.hookLast7d.recalls) + "%" : "—", "prompts injected · 7d"],
+    [String(s.facts), "facts"],
+    [String(s.redactedTurns), "redacted"],
+    [s.dbSizeMb + " MB", "on disk"],
+    [injRate, "prompts injected, 7d"],
   ];
-  const max = Math.max(1, ...s.turnsPerDay.map(d => d.n));
-  const w = 24, gap = 2, h = 120;
+
+  const max = Math.max(1, ...s.turnsPerDay.map((d) => d.n));
+  const w = 18, gap = 6, h = 130, pad = 16;
+  const svgW = Math.max(1, s.turnsPerDay.length * (w + gap) - gap);
   const bars = s.turnsPerDay.map((d, i) => {
-    const bh = Math.max(2, Math.round((d.n / max) * (h - 20)));
-    return `<rect class="bar" x="${i * (w + gap)}" y="${h - bh}" width="${w}" height="${bh}" rx="3"><title>${d.day}: ${d.n} turns</title></rect>`;
+    const bh = Math.max(2, Math.round((d.n / max) * (h - 34)));
+    // Clamp edge labels into the canvas so the first/last dates don't clip.
+    const lx = Math.min(Math.max(i * (w + gap) + w / 2, 17), svgW - 17);
+    const label = i % 5 === 0
+      ? `<text class="axis" x="${lx}" y="${h - 2}" text-anchor="middle">${d.day.slice(5)}</text>`
+      : "";
+    return `<rect class="bar" x="${i * (w + gap)}" y="${h - pad - bh}" width="${w}" height="${bh}" rx="2"><title>${d.day} · ${d.n} turns</title></rect>${label}`;
   }).join("");
-  const svgW = s.turnsPerDay.length * (w + gap);
-  $("#main").innerHTML = `
-    <div class="tiles">${tiles.map(([v, k]) => `<div class="tile"><div class="v">${v}</div><div class="k">${k}</div></div>`).join("")}</div>
-    <div class="card"><h2>Turns per day · last 30 days</h2>
-      ${s.turnsPerDay.length ? `<svg viewBox="0 0 ${svgW} ${h}" width="${svgW}" height="${h}">${bars}</svg>` : `<div class="empty">no recent turns</div>`}
+
+  mount(`
+    <div class="ledger">
+      ${figures.map(([n, k]) => `<div><span class="n">${n}</span><span class="label">${k}</span></div>`).join("")}
     </div>
-    <div class="card"><h2>Sessions by source</h2>
-      <table><tr><th>source</th><th>sessions</th></tr>
-      ${s.bySource.map(r => `<tr><td>${esc(r.source_agent)}</td><td>${r.n}</td></tr>`).join("")}</table>
-    </div>`;
-  $("#daemon-info").textContent = s.dbPath;
+    <section>
+      <span class="label">Turns per day, last 30 days</span>
+      ${s.turnsPerDay.length
+        ? `<svg class="chart" width="${svgW}" height="${h}" viewBox="0 0 ${svgW} ${h}" role="img" aria-label="Turns captured per day">${bars}</svg>`
+        : `<div class="empty">No turns in the last 30 days.</div>`}
+    </section>
+    <section>
+      <span class="label">Sessions by source</span>
+      <table style="max-width:380px">
+        ${s.bySource.map((r) => `<tr><td class="mono">${esc(r.source_agent)}</td><td class="mono" style="text-align:right">${r.n.toLocaleString()}</td></tr>`).join("")}
+      </table>
+    </section>
+  `);
 };
 
-/* ---------- search ---------- */
+/* ---------------- search ---------------- */
 views.search = () => {
-  $("#main").innerHTML = `
-    <div class="row"><input type="text" id="q" placeholder="Search your memory… (enter)"></div>
-    <div id="results"></div>`;
-  $("#q").focus();
-  $("#q").onkeydown = async (e) => {
-    if (e.key !== "Enter" || !e.target.value.trim()) return;
-    $("#results").innerHTML = `<div class="empty">searching…</div>`;
-    const r = await api("/recall", { method: "POST", body: JSON.stringify({ query: e.target.value, limit: 8, source: "ui" }) });
-    $("#results").innerHTML = r.snippets.length ? r.snippets.map(s => `
-      <div class="card">
-        <div class="row" style="margin-bottom:6px">
-          ${s.kind === "fact" ? `<span class="pill k-${esc(s.factKind)}">📌 ${esc(s.factKind)}</span>` : `<span class="dim">${esc(s.role)}</span>`}
-          <span class="score">${s.score.toFixed(3)}</span>
-          <span class="dim">${esc((s.ts ?? "").slice(0, 10))}${s.project ? " · " + esc(s.project) : ""}</span>
-        </div>
-        <div class="snip">${esc(s.content)}</div>
-      </div>`).join("") : `<div class="empty">nothing above threshold</div>`;
+  mount(`
+    <section>
+      <input type="text" id="q" placeholder="Search your memory" autocomplete="off">
+      <div class="hint">enter to search · facts rank first · scores are cosine similarity</div>
+    </section>
+    <div id="results"></div>
+  `);
+  const q = $("#q");
+  q.focus();
+  q.onkeydown = async (e) => {
+    if (e.key !== "Enter" || !q.value.trim()) return;
+    $("#results").innerHTML = `<div class="empty">Searching…</div>`;
+    try {
+      const r = await api("/recall", { method: "POST", body: JSON.stringify({ query: q.value, limit: 8, source: "ui" }) });
+      $("#results").innerHTML = r.snippets.length
+        ? r.snippets.map((s) => `
+          <div class="result">
+            <div class="meta">
+              ${s.kind === "fact"
+                ? `<span class="kind ${esc(s.factKind)}">${esc(s.factKind)}</span>`
+                : `<span class="mono dim">${esc(s.role)}</span>`}
+              <span class="score">${s.score.toFixed(3)}</span>
+              <span class="mono dim">${fmtDay(s.ts)}${s.project ? " · " + esc(s.project) : ""}</span>
+            </div>
+            <div class="snip">${esc(s.content)}</div>
+          </div>`).join("")
+        : `<div class="empty">Nothing scored above the floor for that query.</div>`;
+    } catch (err) {
+      $("#results").innerHTML = `<div class="empty">Search failed: ${esc(err.message)}</div>`;
+    }
   };
 };
 
-/* ---------- sessions ---------- */
+/* ---------------- sessions ---------------- */
 views.sessions = async () => {
   const rows = await api("/api/sessions?limit=100");
-  $("#main").innerHTML = `<div class="card"><h2>Recent sessions</h2><table>
-    <tr><th>when</th><th>source</th><th>project</th><th>branch</th><th>turns</th><th></th></tr>
-    ${rows.map(r => `<tr>
-      <td class="dim">${esc((r.last_seen_at ?? "").slice(0, 16).replace("T", " "))}</td>
-      <td>${esc(r.source_agent)}</td><td>${esc(r.project ?? "")}</td>
-      <td class="mono">${esc(r.git_branch ?? "")}</td><td>${r.turn_count}</td>
-      <td><a onclick="showSession('${esc(r.id)}')">open</a></td></tr>`).join("")}
-  </table></div><div id="session-detail"></div>`;
+  mount(`
+    <section>
+      <span class="label">Recent sessions</span>
+      <table>
+        <tr><th class="label">when</th><th class="label">source</th><th class="label">project</th><th class="label">branch</th><th class="label" style="text-align:right">turns</th></tr>
+        ${rows.map((r) => `
+          <tr class="rowlink" onclick="showSession('${esc(r.id)}')">
+            <td class="mono dim" style="white-space:nowrap">${fmtWhen(r.last_seen_at)}</td>
+            <td class="mono">${esc(r.source_agent)}</td>
+            <td>${esc(r.project ?? "")}</td>
+            <td class="mono dim">${esc(r.git_branch ?? "")}</td>
+            <td class="mono" style="text-align:right">${r.turn_count}</td>
+          </tr>`).join("")}
+      </table>
+    </section>
+    <div id="session-detail"></div>
+  `);
 };
 window.showSession = async (id) => {
   const turns = await api(`/api/sessions/${encodeURIComponent(id)}/turns`);
-  $("#session-detail").innerHTML = `<div class="card"><h2>${esc(id)}</h2>
-    ${turns.map(t => `
-      <div style="margin-bottom:10px">
-        <div class="row" style="margin-bottom:2px">
-          <b>${esc(t.role)}</b><span class="dim">${esc((t.ts ?? "").slice(11, 19))}</span>
-          ${t.redaction_count ? `<span class="pill k-gotcha">${t.redaction_count} redacted</span>` : ""}
-          <button class="act" onclick="blockTurn(${t.rowid}, this)" title="remove from the search index — it will never be injected again">never inject</button>
-        </div>
-        <div class="snip dim">${esc(t.content.slice(0, 600))}${t.content.length > 600 ? "…" : ""}</div>
-      </div>`).join("")}</div>`;
-  $("#session-detail").scrollIntoView({ behavior: "smooth" });
+  $("#session-detail").innerHTML = `
+    <section class="view">
+      <span class="label">Session <span class="mono">${esc(id)}</span></span>
+      ${turns.map((t) => `
+        <div class="result">
+          <div class="meta">
+            <span class="mono">${esc(t.role)}</span>
+            <span class="mono dim">${(t.ts ?? "").slice(11, 19)}</span>
+            ${t.redaction_count ? `<span class="mono flag">${t.redaction_count} redacted</span>` : ""}
+            <button class="act" onclick="blockTurn(${t.rowid}, this)" title="Remove from the search index; it will never be injected again">never inject</button>
+          </div>
+          <div class="snip">${esc(t.content.slice(0, 600))}${t.content.length > 600 ? "…" : ""}</div>
+        </div>`).join("")}
+    </section>`;
+  $("#session-detail").scrollIntoView({ behavior: "smooth", block: "start" });
 };
 window.blockTurn = async (rowid, btn) => {
   await api(`/api/turns/${rowid}/block`, { method: "POST", body: "{}" });
-  btn.textContent = "blocked"; btn.disabled = true;
+  btn.textContent = "blocked";
+  btn.disabled = true;
 };
 
-/* ---------- facts ---------- */
+/* ---------------- facts ---------------- */
 views.facts = async (archived = 0) => {
   const facts = await api(`/api/facts?archived=${archived}`);
-  $("#main").innerHTML = `
-    <div class="row">
-      <select id="new-kind"><option>decision</option><option>gotcha</option><option>preference</option><option>reference</option></select>
-      <input type="text" id="new-content" placeholder="Add a fact…" style="flex:1">
+  mount(`
+    <div class="addrow">
+      <select id="new-kind" aria-label="Fact kind">
+        <option>decision</option><option>gotcha</option><option>preference</option><option>reference</option>
+      </select>
+      <input type="text" id="new-content" placeholder="Add a fact" autocomplete="off">
       <button class="act" onclick="addFact()">add</button>
-      <a onclick="views.facts(${archived ? 0 : 1})" style="margin-left:auto">${archived ? "← active" : "archived →"}</a>
     </div>
-    <div class="card"><table>
-      <tr><th></th><th>kind</th><th>fact</th><th>project</th><th>updated</th><th></th></tr>
-      ${facts.map(f => `<tr id="f-${f.id.slice(0,8)}">
-        <td>${f.pinned ? "📌" : ""}${f.edited ? "✎" : ""}</td>
-        <td><span class="pill k-${esc(f.kind)}">${esc(f.kind)}</span></td>
-        <td class="snip" style="max-width:520px"><span id="fc-${f.id.slice(0,8)}">${esc(f.content)}</span></td>
-        <td class="dim">${esc(f.project ?? "")}</td>
-        <td class="dim">${esc(f.updated_at.slice(0, 10))}</td>
-        <td style="white-space:nowrap">
-          <button class="act" onclick="editFactUi('${f.id}','${f.id.slice(0,8)}')">edit</button>
-          <button class="act" onclick="patchFact('${f.id}',{pinned:${!f.pinned}})">${f.pinned ? "unpin" : "pin"}</button>
-          <button class="act" onclick="patchFact('${f.id}',{archived:${!archived}})">${archived ? "restore" : "archive"}</button>
-        </td></tr>`).join("")}
-    </table>${facts.length ? "" : `<div class="empty">no ${archived ? "archived " : ""}facts — try: recalld distill</div>`}</div>`;
+    <section>
+      <span class="label">${archived ? "Archived facts" : "Facts"}
+        <a class="link" style="float:right" onclick="views.facts(${archived ? 0 : 1})">${archived ? "back to active" : "view archived"}</a>
+      </span>
+      <table>
+        <tr><th class="label">kind</th><th class="label">fact</th><th class="label">project</th><th class="label">updated</th><th></th></tr>
+        ${facts.map((f) => {
+          const sid = f.id.slice(0, 8);
+          return `
+          <tr id="row-${sid}">
+            <td><span class="kind ${esc(f.kind)}">${esc(f.kind)}</span></td>
+            <td class="fact-content">
+              ${f.pinned ? `<span class="flag" title="pinned">▪ </span>` : ""}<span id="fc-${sid}">${esc(f.content)}</span>
+              <div id="ed-${sid}"></div>
+            </td>
+            <td class="mono dim">${esc(f.project ?? "")}</td>
+            <td class="mono dim" style="white-space:nowrap">${fmtDay(f.updated_at)}</td>
+            <td style="white-space:nowrap; text-align:right">
+              <button class="act" onclick="editFactUi('${f.id}','${sid}')">edit</button>
+              <button class="act" onclick="patchFact('${f.id}',{pinned:${!f.pinned}})">${f.pinned ? "unpin" : "pin"}</button>
+              <button class="act" onclick="patchFact('${f.id}',{archived:${!archived}})">${archived ? "restore" : "archive"}</button>
+            </td>
+          </tr>`;
+        }).join("")}
+      </table>
+      ${facts.length ? "" : `<div class="empty">No ${archived ? "archived " : ""}facts yet. Promote some from history with <span class="mono">recalld distill</span>.</div>`}
+    </section>
+  `);
 };
 window.addFact = async () => {
   const content = $("#new-content").value.trim();
@@ -206,32 +392,61 @@ window.patchFact = async (id, patch) => {
   await api(`/api/facts/${id}`, { method: "PATCH", body: JSON.stringify(patch) });
   views.facts();
 };
-window.editFactUi = async (id, short) => {
-  const cur = $(`#fc-${short}`).textContent;
-  const next = prompt("Edit fact (re-embeds on save):", cur);
-  if (next && next !== cur) await window.patchFact(id, { content: next });
+window.editFactUi = (id, sid) => {
+  const span = $(`#fc-${sid}`);
+  const holder = $(`#ed-${sid}`);
+  if (!span || holder.childElementCount) return;
+  const current = span.textContent;
+  span.style.display = "none";
+  holder.innerHTML = `
+    <textarea class="editbox" id="ta-${sid}">${esc(current)}</textarea>
+    <div class="editactions">
+      <button class="act" onclick="saveFactEdit('${id}','${sid}')">save, re-embeds</button>
+      <button class="act" onclick="cancelFactEdit('${sid}')">cancel</button>
+    </div>`;
+  const ta = $(`#ta-${sid}`);
+  ta.focus();
+  ta.setSelectionRange(current.length, current.length);
+};
+window.saveFactEdit = async (id, sid) => {
+  const next = $(`#ta-${sid}`).value.trim();
+  const current = $(`#fc-${sid}`).textContent;
+  if (next && next !== current) await window.patchFact(id, { content: next });
+  else window.cancelFactEdit(sid);
+};
+window.cancelFactEdit = (sid) => {
+  $(`#ed-${sid}`).innerHTML = "";
+  $(`#fc-${sid}`).style.display = "";
 };
 
-/* ---------- activity ---------- */
+/* ---------------- activity ---------------- */
 views.activity = async () => {
   const rows = await api("/api/injections?limit=60");
-  $("#main").innerHTML = `<div class="card"><h2>What recall did recently</h2><table>
-    <tr><th>when</th><th>src</th><th>query</th><th>injected</th><th>top</th><th>label</th></tr>
-    ${rows.map(r => `<tr>
-      <td class="dim" style="white-space:nowrap">${esc(r.ts.slice(5, 16).replace("T", " "))}</td>
-      <td>${esc(r.source)}</td>
-      <td class="snip" style="max-width:420px">${esc(r.query.slice(0, 140))}</td>
-      <td>${r.n_injected}</td>
-      <td class="score">${r.top_score ?? ""}</td>
-      <td style="white-space:nowrap">${r.n_injected ? `
-        <button class="act" onclick="labelInj(${r.id},'relevant',this)">👍</button>
-        <button class="act" onclick="labelInj(${r.id},'irrelevant',this)">👎</button>` : ""}</td>
-    </tr>`).join("")}
-  </table>${rows.length ? "" : `<div class="empty">no recalls logged yet</div>`}</div>`;
+  mount(`
+    <section>
+      <span class="label">What recall did recently</span>
+      <table>
+        <tr><th class="label">when</th><th class="label">via</th><th class="label">query</th><th class="label" style="text-align:right">injected</th><th class="label">top</th><th class="label">verdict</th></tr>
+        ${rows.map((r) => `
+          <tr>
+            <td class="mono dim" style="white-space:nowrap">${esc(r.ts.slice(5, 16).replace("T", " "))}</td>
+            <td class="mono dim">${esc(r.source)}</td>
+            <td class="quiet" style="max-width:420px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap">${esc(r.query.slice(0, 160))}</td>
+            <td class="mono" style="text-align:right">${r.n_injected}</td>
+            <td class="score">${r.top_score ?? ""}</td>
+            <td style="white-space:nowrap">${r.n_injected ? `
+              <button class="act" onclick="labelInj(${r.id},'relevant',this)">useful</button>
+              <button class="act" onclick="labelInj(${r.id},'irrelevant',this)">noise</button>` : ""}</td>
+          </tr>`).join("")}
+      </table>
+      ${rows.length ? `<div class="hint">verdicts append to ~/.recall/eval/labels.jsonl and feed the eval set</div>`
+                    : `<div class="empty">No recalls logged yet. They appear here as your agents work.</div>`}
+    </section>
+  `);
 };
 window.labelInj = async (id, verdict, btn) => {
   await api(`/api/injections/${id}/label`, { method: "POST", body: JSON.stringify({ verdict }) });
-  btn.parentElement.innerHTML = `<span class="dim">${verdict === "relevant" ? "👍" : "👎"} saved</span>`;
+  btn.parentElement.innerHTML = `<span class="mono dim">${verdict === "relevant" ? "useful" : "noise"} ✓</span>`;
 };
 
 renderTabs();

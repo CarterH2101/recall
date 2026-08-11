@@ -16,6 +16,25 @@ export async function run(argv: string[]): Promise<void> {
   }
 
   const db = getDb();
+
+  // Injection-log queries are raw prompt text — same sweep, no re-embedding
+  // needed (the log is never vectorized).
+  let injCleaned = 0;
+  try {
+    const rows = db.prepare(`SELECT id, query FROM injections`).all() as any[];
+    for (const row of rows) {
+      const r = redact(row.query);
+      if (!r.count) continue;
+      injCleaned++;
+      if (!dry) db.prepare(`UPDATE injections SET query = ? WHERE id = ?`).run(r.text, row.id);
+    }
+  } catch {
+    /* pre-v3 database */
+  }
+  if (injCleaned) {
+    console.log(`${dry ? "[dry-run] Would clean" : "Cleaned"} ${injCleaned} injection-log quer${injCleaned === 1 ? "y" : "ies"}.`);
+  }
+
   const total = (db.prepare(`SELECT COUNT(*) n FROM turns`).get() as any).n;
   const totals: Record<string, number> = {};
   let affectedTurns = 0;
