@@ -3,11 +3,14 @@
 **Local-first memory for your coding agents — cross-session, cross-agent, and voice-accessible via Siri.**
 
 Your AI coding sessions are full of decisions, approaches, and answers that
-evaporate the moment the session ends. `recall` captures your Claude Code
-sessions, indexes them **entirely on your own machine**, and:
+evaporate the moment the session ends. `recall` captures your **Claude Code
+and Codex CLI** sessions, indexes them **entirely on your own machine**, and:
 
 - **auto-injects** relevant past context into every new prompt (your agent
-  remembers what you did last week),
+  remembers what you did last week — even if you did it in a different agent),
+- **redacts secrets** before anything is stored or embedded,
+- **distills** durable facts (decisions, gotchas, conventions) out of raw
+  history and ranks them first,
 - gives any agent an explicit **`recall` MCP tool** ("what did I conclude
   about X?"),
 - and answers **by voice from your iPhone**: *"Hey Siri, Ask Recall."*
@@ -16,8 +19,9 @@ sessions, indexes them **entirely on your own machine**, and:
 local. No cloud, no account, no API key. Your transcripts already sit on your
 disk — this just makes them useful.
 
-> **Beta.** Captures Claude Code today. Codex/Cursor adapters are next — the
-> schema is already source-agnostic.
+> **1.0.** Captures Claude Code and Codex CLI today; Cursor is next. Retrieval
+> quality is regression-gated by an eval harness in CI — changes are measured,
+> not vibed.
 
 ## Install
 
@@ -27,10 +31,14 @@ npx recalld@latest setup
 
 That's it. One command installs the runtime to `~/.recall/app` (~550MB of
 dependencies — the on-device embedding engine is most of it), downloads a
-~130MB embedding model once, indexes your existing transcripts, registers the
-Claude Code hooks, and starts the local daemon. Restart your Claude Code
+~130MB embedding model once, indexes your existing Claude Code transcripts,
+registers the hooks, and starts the local daemon. Restart your Claude Code
 session and you'll see `🧠 recall: injected N snippets…` when past context is
 found.
+
+If you use Codex CLI, new sessions are captured automatically (the daemon
+watches `~/.codex/sessions`); index older Codex history once with
+`recalld backfill --source codex`.
 
 **Or install as a Claude Code plugin:**
 
@@ -52,10 +60,12 @@ Alpine are not supported yet — sqlite-vec has no prebuilds there).
 Claude Code ──Stop hook──────────► recalld (local daemon, 127.0.0.1)
             ──UserPromptSubmit────►   • warm local embedding model
                   │                    • SQLite + sqlite-vec (one file: ~/.recall/memory.db)
-                  ▼                    • /ingest /recall /ask
-        injected context
-                                     ▲                    ▲
-   Any agent ── stdio MCP ───────────┘     iPhone ── Siri Shortcut ── /ask
+                  ▼                    • secret redaction before storage
+        injected context               • /ingest /recall /ask /ui
+                                     ▲               ▲            ▲
+ Codex CLI ── rollout watcher ───────┘               │            │
+ Any agent ── stdio MCP ─────────────────────────────┘            │
+                            iPhone ── Siri Shortcut ── /ask ──────┘
 ```
 
 - **Auto-recall on every prompt.** A `UserPromptSubmit` hook vector-searches
@@ -63,8 +73,22 @@ Claude Code ──Stop hook──────────► recalld (local daem
   `🧠 recall: …` indicator). Conservative thresholds, hard caps, and strictly
   fail-open: if the daemon is down it injects nothing and your prompt is
   untouched.
-- **Silent capture.** A `Stop` hook ingests just the appended bytes of the
-  session transcript. Idempotent — never duplicates, even on 38MB transcripts.
+- **Silent capture, cross-agent.** A `Stop` hook ingests just the appended
+  bytes of Claude Code transcripts; a daemon-side watcher captures Codex CLI
+  rollouts. Idempotent — never duplicates, even on 38MB transcripts. Ask
+  Claude Code what you did in Codex last week: it knows.
+- **Secret redaction before storage — and before embedding.** ~20
+  high-precision rules (AWS/GitHub/OpenAI/Anthropic/Slack/Stripe keys, PEM
+  blocks, JWTs, connection-string passwords, entropy-gated generics) run at
+  ingest, so credentials never enter the database or the vector index.
+  Retro-clean an existing database with `recalld redact --dry-run`.
+- **Distilled facts.** `recalld distill` promotes durable knowledge
+  (decisions, gotchas, preferences, references) out of raw history —
+  summarized locally via headless `claude -p` when available, heuristics
+  otherwise. Facts are editable/pinnable and rank above raw snippets (📌).
+- **A local viewer** at `http://127.0.0.1:4319/ui`: search your memory,
+  browse sessions, manage facts, and audit exactly what got injected into
+  which prompt (with 👍/👎 labeling that feeds the eval set).
 - **MCP tools.** `recall(query, …)` and `recent_sessions()` over stdio for any
   MCP-capable agent: `recalld mcp` (talks to the daemon — no second copy of
   the model in RAM).
@@ -81,9 +105,14 @@ Claude Code ──Stop hook──────────► recalld (local daem
 recalld setup            install/update everything (--runtime-only, --no-backfill)
 recalld status           install + daemon + database at a glance
 recalld doctor           diagnose problems, with fix hints
+recalld backfill         index existing transcripts (--source claude-code|codex|all)
+recalld redact           retro-clean secrets from stored turns (--dry-run|--backfill)
+recalld distill          promote durable facts from history (dry-run; --apply)
+recalld facts            manage facts (list|add|edit|pin|archive|rm)
+recalld sync             team sync (init|join|now|share|status)
+recalld eval             retrieval-quality harness (run|seed|label)
 recalld autostart on     start the daemon at login (optional; schtasks/launchd/systemd)
 recalld update           update the runtime to the latest release
-recalld backfill         re-index existing transcripts
 recalld uninstall        remove hooks/shims/runtime (--purge removes your data too)
 ```
 
@@ -104,8 +133,10 @@ These are read from the real process environment (nothing loads `.env` —
 | `RECALL_MIN_SCORE` | `0.75` | Min similarity for auto-injected snippets |
 | `RECALL_ASK_MIN_SCORE` | `0.45` | Min similarity for Siri `/ask` answers |
 | `RECALL_PROJECT_ROOTS` | — | `path=label;path=label` cwd→project mapping (also `~/.recall/config.json`) |
+| `RECALL_DISTILL_CMD` | auto-detects `claude -p` | Local summarizer command for `recalld distill` (any stdin→JSON CLI, e.g. ollama) |
 | `RECALL_DEBUG` | — | `1` for daemon request logging (metadata only) |
 | `RECALL_PRUNE_CWD` | — | cwd substrings treated as junk by prune-noise |
+| `CODEX_HOME` | `~/.codex` | Where Codex CLI keeps its sessions |
 
 ## Migrating from a clone install
 
@@ -121,14 +152,22 @@ Your memory database is kept unless you pass `--purge`.
 
 ## Privacy model, stated plainly
 
-- Capture reads transcript files Claude Code already writes to your disk.
+- Capture reads transcript files your agents (Claude Code, Codex CLI) already
+  write to your disk. Codex system prompts and encrypted reasoning blocks are
+  never stored.
 - Embeddings run in-process with a local model (one-time download from
   Hugging Face into `~/.recall/models`; after that the network is never used).
 - The daemon binds localhost by default. If you opt into `RECALL_BIND=0.0.0.0`
-  for Siri, non-localhost requests require a bearer token, and using Tailscale
-  keeps traffic end-to-end encrypted between your own devices.
-- Transcripts can contain secrets. They stay in `~/.recall/memory.db` on your
-  machine. Redaction-on-ingest is on the roadmap ahead of any sync feature.
+  for Siri, non-localhost requests require a bearer token — and the viewer
+  plus its admin API stay localhost-only even with the token. Tailscale keeps
+  phone traffic end-to-end encrypted between your own devices.
+- Transcripts can contain secrets, so recall redacts them **before** storage
+  and embedding (they never enter the database or the vector index), and the
+  same rules hard-gate anything you share via team sync. Databases created
+  before redaction existed can be retro-cleaned: `recalld redact --dry-run`,
+  then `--backfill` (rewrites, re-embeds, and vacuums so plaintext doesn't
+  linger in freed pages). Redaction is high-precision, not a guarantee —
+  treat the database like the transcripts it came from.
 
 ## Development
 
