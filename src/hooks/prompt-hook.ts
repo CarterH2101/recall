@@ -70,7 +70,7 @@ async function main(): Promise<void> {
 
   const snippets = await recallRemote(
     prompt,
-    { excludeSessionId: sessionId, limit: LIMIT, minScore: MIN_SCORE },
+    { excludeSessionId: sessionId, limit: LIMIT, minScore: MIN_SCORE, source: "hook" },
     800,
   );
   if (!snippets || !snippets.length) return;

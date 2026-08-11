@@ -1,0 +1,20 @@
+{"id":"syn-01","query":"how did we stop customers getting charged twice by webhook retries","expected_session_ids":["fx-sess-01"],"notes":"idempotent stripe handler","source":"synthetic"}
+{"id":"syn-02","query":"do webhook events arrive in order or do we need to handle out of order delivery","expected_session_ids":["fx-sess-01"],"source":"synthetic"}
+{"id":"syn-03","query":"what fixed the product list re-rendering every card on hover","expected_session_ids":["fx-sess-02"],"source":"synthetic"}
+{"id":"syn-04","query":"why were images downloading again on each render of the grid","expected_session_ids":["fx-sess-02"],"source":"synthetic"}
+{"id":"syn-05","query":"how did we speed up the slow container builds in the pipeline","expected_session_ids":["fx-sess-03"],"notes":"buildkit registry cache","source":"synthetic"}
+{"id":"syn-06","query":"why is cross platform arm compilation slow in CI and what did we do","expected_session_ids":["fx-sess-03"],"source":"synthetic"}
+{"id":"syn-07","query":"what was the fix for the events table query getting slower every week","expected_session_ids":["fx-sess-04"],"notes":"index bloat","source":"synthetic"}
+{"id":"syn-08","query":"which index type did we pick for time range queries on append only data","expected_session_ids":["fx-sess-04"],"notes":"BRIN","source":"synthetic"}
+{"id":"syn-09","query":"why did users keep getting signed out intermittently","expected_session_ids":["fx-sess-05"],"notes":"jwt key rotation skew","source":"synthetic"}
+{"id":"syn-10","query":"where should we store refresh tokens on the client","expected_session_ids":["fx-sess-05"],"source":"synthetic"}
+{"id":"syn-11","query":"how did we fix the sticky sidebar covering the page footer","expected_session_ids":["fx-sess-06"],"source":"synthetic"}
+{"id":"syn-12","query":"the dataframe join was losing thousands of records, what was the cause","expected_session_ids":["fx-sess-07"],"notes":"float dtype join keys","source":"synthetic"}
+{"id":"syn-13","query":"what guard did we add so bad merges fail loudly in the pipeline","expected_session_ids":["fx-sess-07"],"source":"synthetic"}
+{"id":"syn-14","query":"how do we keep the cache fresh when profiles are updated","expected_session_ids":["fx-sess-08"],"notes":"delete-on-write","source":"synthetic"}
+{"id":"syn-15","query":"how did we cut down duplicate expensive test runs across the build matrix","expected_session_ids":["fx-sess-09"],"source":"synthetic"}
+{"id":"syn-16","query":"what stops all the socket clients hammering the server at once after a restart","expected_session_ids":["fx-sess-10"],"notes":"jittered backoff + drain","source":"synthetic"}
+{"id":"syn-17","query":"uploads to the bucket fail with a signature error in the browser but not curl","expected_session_ids":["fx-sess-11"],"source":"synthetic"}
+{"id":"syn-18","query":"how did we get rid of database locked errors in the desktop client","expected_session_ids":["fx-sess-12"],"notes":"WAL + busy_timeout","source":"synthetic"}
+{"id":"syn-19","query":"what do you do when the infrastructure state lock is stuck after a cancelled job","expected_session_ids":["fx-sess-13"],"source":"synthetic"}
+{"id":"syn-20","query":"why did publishing the package from the release workflow keep failing with permission errors","expected_session_ids":["fx-sess-14"],"source":"synthetic"}

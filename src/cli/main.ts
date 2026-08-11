@@ -23,6 +23,7 @@ Usage: recalld <command> [options]
 
   backfill         Index existing transcripts (--source claude-code|codex|all)
   redact           Retro-clean secrets from stored turns (--dry-run|--backfill)
+  eval             Retrieval-quality harness (run|seed|label|build-fixture)
   mcp              Run the MCP stdio server
   install-hooks    (Re)register Claude Code hooks only
   reproject        Recompute project labels after config changes
@@ -84,6 +85,10 @@ async function main(): Promise<void> {
     case "install-hooks": {
       const m = await import("./install-hooks.js");
       return m.run();
+    }
+    case "eval": {
+      const m = await import("./eval.js");
+      return m.run(rest);
     }
     case "redact": {
       const m = await import("./redact-backfill.js");

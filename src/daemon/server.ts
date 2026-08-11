@@ -80,6 +80,42 @@ function voiceAnswer(snippets: Snippet[]): string {
 
 const DEBUG = process.env.RECALL_DEBUG === "1";
 
+// What recall actually surfaced, per query — feeds the eval-labeling loop and
+// the viewer's activity feed. Zero-result calls are logged too (miss rate is
+// a metric). Never allowed to fail a recall.
+function logInjection(source: string, req: any, snippets: Snippet[]): void {
+  try {
+    getDb()
+      .prepare(
+        `INSERT INTO injections (ts, source, query, session_id, project, min_score, results, n_injected, top_score)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      )
+      .run(
+        new Date().toISOString(),
+        source,
+        String(req.query).slice(0, 2000),
+        req.excludeSessionId ?? null,
+        req.project ?? null,
+        req.minScore ?? null,
+        JSON.stringify(snippets.map((s) => ({ id: s.turnId, kind: "turn", score: Number(s.score.toFixed(4)) }))),
+        snippets.length,
+        snippets.length ? Number(snippets[0].score.toFixed(4)) : null,
+      );
+  } catch {
+    /* logging must never break recall */
+  }
+}
+
+function sweepInjections(): void {
+  try {
+    getDb().exec(
+      `DELETE FROM injections WHERE id < (SELECT COALESCE(MAX(id), 0) FROM injections) - 20000`,
+    );
+  } catch {
+    /* table may not exist mid-migration */
+  }
+}
+
 function healthPayload(port: number) {
   return {
     ok: true,
@@ -131,6 +167,7 @@ function makeHandler(token: string, port: number) {
           limit: b.limit,
           minScore: b.minScore,
         });
+        logInjection(b.source ?? "mcp", b, snippets);
         return json(res, 200, { snippets });
       }
       // Voice-friendly Q&A for the Siri shortcut. Accepts POST {q} OR GET /ask?q=...
@@ -147,6 +184,7 @@ function makeHandler(token: string, port: number) {
         }
         if (!q) return json(res, 400, { error: "q required" });
         const snippets = await recall(String(q), { limit: 4, minScore: ASK_MIN_SCORE });
+        logInjection("ask", { query: String(q), minScore: ASK_MIN_SCORE }, snippets);
         const answer = voiceAnswer(snippets);
         return json(res, 200, {
           answer,
@@ -225,6 +263,7 @@ async function acquirePort(handler: http.RequestListener): Promise<{ server: htt
 
 export async function startDaemon(): Promise<void> {
   getDb();
+  sweepInjections();
   const token = getOrCreateToken();
 
   // Bind before the model warms so identity/handshake are answerable

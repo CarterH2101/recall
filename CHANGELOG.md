@@ -4,6 +4,34 @@ All notable changes to this project are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and versions follow
 [Semantic Versioning](https://semver.org/).
 
+## [0.3.0] — 2026-08-11
+
+Retrieval changes are measured now, not vibed.
+
+### Added
+- **Eval harness** (`recalld eval`): labeled-dataset runner computing
+  recall@1/3/5, MRR, hook-operating-point precision/noise/injection rates,
+  and a threshold sweep that recommends the F0.5-optimal `RECALL_MIN_SCORE`
+  with a hit/miss score histogram. `seed` samples real history into
+  candidates; `label` is an interactive y/n/f labeling loop building
+  `~/.recall/eval/personal.jsonl` (never committed).
+- **CI eval gate**: committed pre-embedded fixture (invented 14-session
+  corpus + 20 paraphrase queries, zero model download in CI) compared
+  against `eval/baseline.json` — recall@3/MRR/hook-recall drops or noise
+  rises >0.02 fail the build. Deterministic (byte-identical repeat runs).
+- **Injections log** (migration v3): every `/recall` and `/ask` records
+  query, source (hook/mcp/ask), result ids + scores — the audit trail of
+  what memory actually got injected, feeding eval labeling and the future
+  viewer. 20k-row retention sweep at daemon start.
+
+### Changed
+- `recall()` split into `recallCandidates()` (KNN + penalties) and
+  `selectSnippets()` (threshold/dedup/pairing) — behavior-identical
+  (deterministic tiebreak added), enabling single-pass threshold sweeps.
+- First measured insight, for the record: on the synthetic fixture the 0.75
+  hook threshold yields 50% hook-recall at 0% noise; 0.69 would yield 90%
+  at 0% noise. Real-history labeling will decide any change.
+
 ## [0.2.0] — 2026-08-11
 
 Memory goes cross-agent, and secrets stop entering the database.

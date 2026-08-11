@@ -1,0 +1,11 @@
+{
+  "cases": 20,
+  "recallAt1": 1,
+  "recallAt3": 1,
+  "recallAt5": 1,
+  "mrr": 1,
+  "hookPrecision": 1,
+  "hookNoiseRate": 0,
+  "hookRecall": 0.5,
+  "recommendedMinScore": 0.69
+}

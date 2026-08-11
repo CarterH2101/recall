@@ -51,6 +51,23 @@ const MIGRATIONS: ((db: Database.Database) => void)[] = [
   `),
   /* v2 — secret redaction bookkeeping */
   (db) => db.exec(`ALTER TABLE turns ADD COLUMN redaction_count INTEGER NOT NULL DEFAULT 0`),
+  /* v3 — injections log: what recall actually surfaced, per query */
+  (db) =>
+    db.exec(`
+    CREATE TABLE injections (
+      id         INTEGER PRIMARY KEY AUTOINCREMENT,
+      ts         TEXT NOT NULL,
+      source     TEXT NOT NULL,
+      query      TEXT NOT NULL,
+      session_id TEXT,
+      project    TEXT,
+      min_score  REAL,
+      results    TEXT NOT NULL,
+      n_injected INTEGER NOT NULL,
+      top_score  REAL
+    );
+    CREATE INDEX idx_injections_ts ON injections(ts);
+  `),
 ];
 
 /** Current schema version — what a fully migrated db's user_version equals. */

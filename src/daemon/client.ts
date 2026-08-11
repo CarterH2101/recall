@@ -101,7 +101,7 @@ async function post(pathname: string, body: unknown, timeoutMs: number): Promise
  */
 export async function recallRemote(
   query: string,
-  opts: { excludeSessionId?: string; project?: string; limit?: number; minScore?: number },
+  opts: { excludeSessionId?: string; project?: string; limit?: number; minScore?: number; source?: string },
   timeoutMs = 800,
 ): Promise<any[] | null> {
   const r = await post("/recall", { query, ...opts }, timeoutMs);

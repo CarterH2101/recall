@@ -6,3 +6,6 @@ dist-test/
 .backfill.log
 .test-transcript.jsonl
 .cache/
+eval/fixtures/models/
+eval/fixtures/*.db-wal
+eval/fixtures/*.db-shm

@@ -79,6 +79,7 @@ export async function daemonRecall(args: Record<string, any>): Promise<SnippetLi
         limit: typeof args.limit === "number" ? args.limit : undefined,
         project: typeof args.project === "string" ? args.project : undefined,
         minScore: typeof args.minScore === "number" ? args.minScore : undefined,
+        source: "mcp",
       }),
       signal: AbortSignal.timeout(30_000), // model may still be warming
     });
