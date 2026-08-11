@@ -68,6 +68,36 @@ const MIGRATIONS: ((db: Database.Database) => void)[] = [
     );
     CREATE INDEX idx_injections_ts ON injections(ts);
   `),
+  /* v4 — distilled durable facts + promotion bookkeeping */
+  (db) =>
+    db.exec(`
+    CREATE TABLE facts (
+      id              TEXT PRIMARY KEY,
+      kind            TEXT NOT NULL CHECK (kind IN ('decision','gotcha','preference','reference')),
+      content         TEXT NOT NULL,
+      content_hash    TEXT NOT NULL,
+      source_turn_ids TEXT NOT NULL DEFAULT '[]',
+      project         TEXT,
+      created_at      TEXT NOT NULL,
+      updated_at      TEXT NOT NULL,
+      pinned          INTEGER NOT NULL DEFAULT 0,
+      archived        INTEGER NOT NULL DEFAULT 0,
+      edited          INTEGER NOT NULL DEFAULT 0,
+      origin          TEXT NOT NULL DEFAULT 'distill'
+    );
+    CREATE UNIQUE INDEX idx_facts_hash ON facts(content_hash);
+    CREATE INDEX idx_facts_project ON facts(project);
+
+    CREATE VIRTUAL TABLE vec_facts
+      USING vec0(embedding float[${DIM}] distance_metric=cosine);
+
+    CREATE TABLE distill_state (
+      turn_rowid   INTEGER PRIMARY KEY,
+      outcome      TEXT NOT NULL,
+      fact_id      TEXT,
+      processed_at TEXT NOT NULL
+    );
+  `),
 ];
 
 /** Current schema version — what a fully migrated db's user_version equals. */

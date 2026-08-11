@@ -4,6 +4,32 @@ All notable changes to this project are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and versions follow
 [Semantic Versioning](https://semver.org/).
 
+## [0.4.0] — 2026-08-11
+
+Raw history gets distilled into durable, editable facts.
+
+### Added
+- **Facts** (migration v4): short curated memories with kind
+  (decision/gotcha/preference/reference), pin/archive/edit, source-turn
+  provenance, and dedup/merge on insert (exact hash merge; ≥0.92 vector
+  similarity merge that never clobbers human edits; 0.86–0.92 flagged
+  near-duplicate). `recalld facts list|add|show|edit|pin|archive|rm`.
+- **Distill** (`recalld distill`, dry-run by default): two-stage promotion —
+  pure-local candidate selection (lexical durability markers + cross-session
+  vector recurrence, injected-content filters) then rewrite via a pluggable
+  local summarizer (`RECALL_DISTILL_CMD`; auto-detects headless `claude -p`;
+  no cloud keys ever). Extractive fallback only for strong assistant
+  decision/gotcha turns. Incremental via `distill_state`.
+- **Merged ranking**: facts rank above raw snippets (+0.06 boost, +0.05
+  pinned, −0.05 threshold relief, capped at limit−1, session-dedup-exempt);
+  raw turns already distilled into a selected fact are suppressed. The hook
+  renders facts as `📌 [kind] …`.
+
+### Fixed
+- vec0 virtual tables don't implement `INSERT OR REPLACE` — vector updates
+  now delete+insert. This also silently broke `redact --reembed`; re-ran
+  against the production db (11 vectors truly rewritten + VACUUM).
+
 ## [0.3.0] — 2026-08-11
 
 Retrieval changes are measured now, not vibed.

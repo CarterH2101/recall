@@ -97,7 +97,13 @@ function logInjection(source: string, req: any, snippets: Snippet[]): void {
         req.excludeSessionId ?? null,
         req.project ?? null,
         req.minScore ?? null,
-        JSON.stringify(snippets.map((s) => ({ id: s.turnId, kind: "turn", score: Number(s.score.toFixed(4)) }))),
+        JSON.stringify(
+          snippets.map((s) => ({
+            id: s.kind === "fact" ? s.factId : s.turnId,
+            kind: s.kind ?? "turn",
+            score: Number(s.score.toFixed(4)),
+          })),
+        ),
         snippets.length,
         snippets.length ? Number(snippets[0].score.toFixed(4)) : null,
       );

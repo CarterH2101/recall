@@ -17,7 +17,10 @@ export interface Snippet {
   toolSummary: string | null;
   ts: string | null;
   project: string | null;
-  score: number; // cosine similarity, 0..1
+  score: number; // cosine similarity, 0..1 (facts carry boosts)
+  kind?: "turn" | "fact";
+  factId?: string;
+  factKind?: string;
 }
 
 /** A scored KNN match before thresholding/dedup/pairing — the eval harness
@@ -163,13 +166,105 @@ export function selectSnippets(
   return out;
 }
 
+// Facts rank above raw snippets: compressed, human-curated memory beats a
+// transcript fragment at equal similarity. They get a score boost, pass at a
+// slightly relieved threshold, are exempt from session dedup, and are capped
+// at limit-1 so at least one raw-snippet slot survives (facts compress; raw
+// snippets carry the detail).
+const FACT_BOOST = 0.06;
+const PIN_BOOST = 0.05;
+const FACT_THRESHOLD_RELIEF = 0.05;
+
+export interface FactMatch {
+  factId: string;
+  factKind: string;
+  content: string;
+  project: string | null;
+  updatedAt: string;
+  pinned: boolean;
+  sourceTurnIds: string[];
+  score: number;
+}
+
+export async function recallFactMatches(
+  query: string,
+  opts: { project?: string; limit?: number } = {},
+): Promise<FactMatch[]> {
+  const db = getDb();
+  const k = Math.max((opts.limit ?? 5) * 2, 8);
+  const qvec = await _embedQuery(query);
+  let matches: { rowid: number; distance: number }[];
+  try {
+    matches = db
+      .prepare(
+        `SELECT rowid, distance FROM vec_facts WHERE embedding MATCH ? AND k = ${k} ORDER BY distance`,
+      )
+      .all(vecBlob(qvec)) as any[];
+  } catch {
+    return []; // pre-v4 database
+  }
+  const byRow = db.prepare(`SELECT * FROM facts WHERE rowid = ?`);
+  const out: FactMatch[] = [];
+  for (const m of matches) {
+    const f = byRow.get(m.rowid) as any;
+    if (!f || f.archived) continue;
+    if (opts.project && f.project !== opts.project) continue;
+    out.push({
+      factId: f.id,
+      factKind: f.kind,
+      content: f.content,
+      project: f.project ?? null,
+      updatedAt: f.updated_at,
+      pinned: !!f.pinned,
+      sourceTurnIds: JSON.parse(f.source_turn_ids),
+      score: 1 - m.distance + FACT_BOOST + (f.pinned ? PIN_BOOST : 0),
+    });
+  }
+  out.sort((a, b) => b.score - a.score);
+  return out;
+}
+
 export async function recall(query: string, opts: RecallOpts = {}): Promise<Snippet[]> {
-  const candidates = await recallCandidates(query, {
-    excludeSessionId: opts.excludeSessionId,
-    project: opts.project,
-    limit: opts.limit,
-  });
-  return selectSnippets(candidates, { limit: opts.limit, minScore: opts.minScore });
+  const limit = opts.limit ?? 5;
+  const minScore = opts.minScore ?? 0;
+
+  const [candidates, factMatches] = [
+    await recallCandidates(query, {
+      excludeSessionId: opts.excludeSessionId,
+      project: opts.project,
+      limit,
+    }),
+    await recallFactMatches(query, { project: opts.project, limit }),
+  ];
+
+  const facts = factMatches
+    .filter((f) => f.score >= Math.max(0, minScore - FACT_THRESHOLD_RELIEF))
+    .slice(0, Math.max(0, limit - 1));
+
+  // A raw turn already distilled into a selected fact is redundant.
+  const suppressed = new Set(facts.flatMap((f) => f.sourceTurnIds));
+  const turnSnippets = selectSnippets(
+    candidates.filter((c) => !suppressed.has(c.turnId)),
+    { limit, minScore },
+  );
+
+  const factSnippets: Snippet[] = facts.map((f) => ({
+    turnId: "",
+    sessionId: `fact:${f.factId}`,
+    role: "fact",
+    content: f.content,
+    toolSummary: null,
+    ts: f.updatedAt,
+    project: f.project,
+    score: f.score,
+    kind: "fact" as const,
+    factId: f.factId,
+    factKind: f.factKind,
+  }));
+
+  return [...factSnippets, ...turnSnippets]
+    .sort((a, b) => b.score - a.score)
+    .slice(0, limit);
 }
 
 export interface RecentSession {

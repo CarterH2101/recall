@@ -81,7 +81,8 @@ async function main(): Promise<void> {
   for (const s of snippets) {
     const when = s.ts ? String(s.ts).slice(0, 10) : "";
     const where = s.project ? ` · ${s.project}` : "";
-    const piece = `- (${when}${where}, ${Number(s.score).toFixed(2)}) ${clip(s.content, SNIPPET_CHARS)}\n`;
+    const prefix = s.kind === "fact" ? `📌 [${s.factKind}] ` : "";
+    const piece = `- ${prefix}(${when}${where}, ${Number(s.score).toFixed(2)}) ${clip(s.content, SNIPPET_CHARS)}\n`;
     if (body.length + piece.length > MAX_CHARS) break;
     body += piece;
     used++;

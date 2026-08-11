@@ -24,6 +24,8 @@ Usage: recalld <command> [options]
   backfill         Index existing transcripts (--source claude-code|codex|all)
   redact           Retro-clean secrets from stored turns (--dry-run|--backfill)
   eval             Retrieval-quality harness (run|seed|label|build-fixture)
+  distill          Promote durable facts from raw history (dry-run; --apply)
+  facts            Manage distilled facts (list|add|edit|pin|archive|rm)
   mcp              Run the MCP stdio server
   install-hooks    (Re)register Claude Code hooks only
   reproject        Recompute project labels after config changes
@@ -88,6 +90,14 @@ async function main(): Promise<void> {
     }
     case "eval": {
       const m = await import("./eval.js");
+      return m.run(rest);
+    }
+    case "distill": {
+      const m = await import("./distill.js");
+      return m.run(rest);
+    }
+    case "facts": {
+      const m = await import("./facts.js");
       return m.run(rest);
     }
     case "redact": {

@@ -69,13 +69,17 @@ async function reembedRows(
 ): Promise<void> {
   console.log(`Re-embedding ${rows.length} rewritten turns...`);
   const { embed } = await import("../lib/embed.js");
-  const insertVec = db.prepare(`INSERT OR REPLACE INTO vec_turns (rowid, embedding) VALUES (?, ?)`);
+  // vec0 virtual tables: BigInt rowids, and no OR REPLACE — delete + insert.
+  const delVec = db.prepare(`DELETE FROM vec_turns WHERE rowid = ?`);
+  const insertVec = db.prepare(`INSERT INTO vec_turns (rowid, embedding) VALUES (?, ?)`);
   for (let i = 0; i < rows.length; i += 32) {
     const chunk = rows.slice(i, i + 32);
     const vecs = await embed(chunk.map((c) => c.content.slice(0, 1500)));
     const tx = db.transaction(() => {
-      // vec0 virtual tables require strictly-INTEGER rowids — bind as BigInt.
-      for (let j = 0; j < chunk.length; j++) insertVec.run(BigInt(chunk[j].rowid), vecBlob(vecs[j]));
+      for (let j = 0; j < chunk.length; j++) {
+        delVec.run(BigInt(chunk[j].rowid));
+        insertVec.run(BigInt(chunk[j].rowid), vecBlob(vecs[j]));
+      }
     });
     tx();
   }
