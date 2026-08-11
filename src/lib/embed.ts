@@ -1,7 +1,13 @@
-import { pipeline } from "@huggingface/transformers";
+import path from "node:path";
+import { pipeline, env } from "@huggingface/transformers";
 import { DIM } from "./db.js";
+import { dataDir } from "./paths.js";
 
 const MODEL = process.env.RECALL_MODEL || "Xenova/bge-small-en-v1.5";
+
+// Keep the downloaded model under ~/.recall so all recall state lives in one
+// place (and uninstall can report/remove it).
+env.cacheDir = process.env.RECALL_MODEL_DIR || path.join(dataDir(), "models");
 
 // transformers.js types are loose; treat the pipeline as a callable.
 let _extractorP: Promise<any> | null = null;

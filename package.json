@@ -1,37 +1,59 @@
 {
-  "name": "recall",
-  "version": "0.0.1",
-  "private": true,
-  "description": "Local-first cross-agent memory layer for coding agents. Captures Claude Code transcripts, embeds them locally, and auto-injects relevant past context into new sessions. Nothing leaves your machine.",
+  "name": "recalld",
+  "version": "0.1.0",
+  "description": "Local-first cross-agent memory for coding agents. Captures your Claude Code sessions, embeds them on your machine, and auto-injects relevant past context into new sessions. No cloud, no account, no API key.",
   "type": "module",
-  "bin": {
-    "recalld": "dist/daemon/server.js",
-    "recall-mcp": "dist/mcp/server.js",
-    "recall-backfill": "dist/cli/backfill.js",
-    "recall-install-hooks": "dist/cli/install-hooks.js",
-    "recall-reproject": "dist/cli/reproject.js",
-    "recall-prune-noise": "dist/cli/prune-noise.js",
-    "recall-ingest-granola": "dist/cli/ingest-granola.js"
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/CarterH2101/recall.git"
   },
+  "homepage": "https://github.com/CarterH2101/recall#readme",
+  "bugs": "https://github.com/CarterH2101/recall/issues",
+  "keywords": [
+    "claude-code",
+    "memory",
+    "mcp",
+    "coding-agents",
+    "embeddings",
+    "local-first",
+    "sqlite-vec"
+  ],
+  "engines": {
+    "node": ">=20.11"
+  },
+  "bin": {
+    "recalld": "dist/cli/main.js"
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE",
+    "CHANGELOG.md",
+    ".env.example"
+  ],
   "scripts": {
     "build": "tsc -p tsconfig.json",
+    "prepack": "npm run build",
     "test": "tsc -p tsconfig.tests.json && node --test \"dist-test/tests/**/*.test.js\"",
-    "setup": "npm run build && node dist/cli/setup.js",
-    "daemon": "node dist/daemon/server.js",
-    "backfill": "node dist/cli/backfill.js",
-    "install-hooks": "node dist/cli/install-hooks.js",
-    "reproject": "node dist/cli/reproject.js",
-    "ingest-granola": "node dist/cli/ingest-granola.js"
+    "bundle-plugin": "npm run build && node scripts/bundle-plugin.mjs",
+    "setup": "npm run build && node dist/cli/main.js setup",
+    "daemon": "node dist/cli/main.js daemon",
+    "backfill": "node dist/cli/main.js backfill",
+    "install-hooks": "node dist/cli/main.js install-hooks",
+    "reproject": "node dist/cli/main.js reproject",
+    "ingest-granola": "node dist/cli/main.js ingest-granola"
   },
   "dependencies": {
     "@huggingface/transformers": "^3.3.3",
     "@modelcontextprotocol/sdk": "^1.13.0",
     "better-sqlite3": "^12.2.0",
-    "sqlite-vec": "^0.1.7-alpha.2"
+    "sqlite-vec": "0.1.7-alpha.2"
   },
   "devDependencies": {
     "@types/better-sqlite3": "^7.6.11",
     "@types/node": "^22.10.0",
+    "esbuild": "^0.24.0",
     "typescript": "^5.7.2"
   }
 }

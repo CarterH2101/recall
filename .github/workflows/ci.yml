@@ -22,3 +22,19 @@ jobs:
       - run: npm ci
       - run: npm run build
       - run: npm test
+      - name: plugin bundles are fresh
+        if: matrix.os == 'ubuntu-latest' && matrix.node == 22
+        run: |
+          npm run bundle-plugin
+          git diff --exit-code -- plugin/dist || (echo "::error::plugin/dist is stale — run npm run bundle-plugin and commit" && exit 1)
+      - name: packed tarball sanity
+        if: matrix.os == 'ubuntu-latest' && matrix.node == 22
+        run: |
+          npm pack --dry-run --json > pack.json
+          node -e "
+            const files = JSON.parse(require('fs').readFileSync('pack.json'))[0].files.map(f => f.path);
+            const need = ['dist/cli/main.js', 'dist/daemon/server.js', 'README.md', 'LICENSE'];
+            for (const n of need) if (!files.includes(n)) { console.error('missing from package: ' + n); process.exit(1); }
+            const main = require('fs').readFileSync('dist/cli/main.js', 'utf8');
+            if (!main.startsWith('#!/usr/bin/env node')) { console.error('shebang missing on dist/cli/main.js'); process.exit(1); }
+          "

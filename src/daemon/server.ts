@@ -4,14 +4,23 @@ import { warmup } from "../lib/embed.js";
 import { ingest } from "../lib/ingest.js";
 import { recall, recentSessions, type Snippet } from "../lib/recall.js";
 import { getOrCreateToken } from "../lib/token.js";
+import { SERVICE, VERSION } from "../lib/version.js";
+import {
+  writeDaemonInfo,
+  clearDaemonInfo,
+  identify,
+  requestShutdown,
+} from "./lifecycle.js";
 
-const PORT = Number(process.env.RECALL_PORT || 4319);
+const BASE_PORT = Number(process.env.RECALL_PORT || 4319);
+const PORT_TRIES = 10;
 // Default: localhost only. Set RECALL_BIND=0.0.0.0 to allow LAN/Tailscale
 // clients (e.g. the Siri shortcut) — those requests must present the token.
 const HOST = process.env.RECALL_BIND || "127.0.0.1";
 
 const ASK_MIN_SCORE = Number(process.env.RECALL_ASK_MIN_SCORE ?? "0.45");
 const ASK_MAX_CHARS = 600;
+const STARTED_AT = new Date().toISOString();
 
 function readBody(req: IncomingMessage): Promise<any> {
   return new Promise((resolve, reject) => {
@@ -69,7 +78,18 @@ function voiceAnswer(snippets: Snippet[]): string {
 
 const DEBUG = process.env.RECALL_DEBUG === "1";
 
-function makeHandler(token: string) {
+function healthPayload(port: number) {
+  return {
+    ok: true,
+    service: SERVICE,
+    version: VERSION,
+    pid: process.pid,
+    port,
+    startedAt: STARTED_AT,
+  };
+}
+
+function makeHandler(token: string, port: number) {
   return async (req: IncomingMessage, res: ServerResponse) => {
     try {
       if (DEBUG) {
@@ -82,7 +102,16 @@ function makeHandler(token: string) {
         return json(res, 401, { error: "unauthorized" });
       }
       if (req.method === "GET" && req.url === "/health") {
-        return json(res, 200, { ok: true });
+        return json(res, 200, healthPayload(port));
+      }
+      if (req.method === "POST" && req.url === "/shutdown") {
+        // Localhost only, even with a valid token: shutdown is an admin
+        // action for same-machine upgrades, not a remote capability.
+        if (!isLocal(req)) return json(res, 403, { error: "localhost only" });
+        json(res, 200, { ok: true, stopping: true });
+        console.error("[recalld] shutdown requested");
+        setTimeout(() => process.exit(0), 150).unref();
+        return;
       }
       if (req.method === "POST" && req.url === "/ingest") {
         const b = await readBody(req);
@@ -134,42 +163,99 @@ function makeHandler(token: string) {
   };
 }
 
-async function main(): Promise<void> {
+function listen(server: http.Server, port: number, host: string): Promise<void> {
+  return new Promise((resolve, reject) => {
+    const onError = (err: NodeJS.ErrnoException) => {
+      server.removeListener("listening", onListening);
+      reject(err);
+    };
+    const onListening = () => {
+      server.removeListener("error", onError);
+      resolve();
+    };
+    server.once("error", onError);
+    server.once("listening", onListening);
+    server.listen(port, host);
+  });
+}
+
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
+/**
+ * Bind localhost, negotiating with whatever already holds the port:
+ * - a same-version recalld → we're redundant, exit quietly
+ * - an older recalld → ask it to shut down and take the port
+ * - a foreign process → advance to the next port (advertised via daemon.json)
+ */
+async function acquirePort(handler: http.RequestListener): Promise<{ server: http.Server; port: number }> {
+  for (let port = BASE_PORT; port < BASE_PORT + PORT_TRIES; port++) {
+    for (let attempt = 0; attempt < 2; attempt++) {
+      const server = http.createServer(handler);
+      try {
+        await listen(server, port, "127.0.0.1");
+        return { server, port };
+      } catch (err) {
+        server.close();
+        if ((err as NodeJS.ErrnoException).code !== "EADDRINUSE") throw err;
+        const info = await identify(port);
+        if (!info) {
+          // Foreign process. Loudly note it and try the next port.
+          console.error(`[recalld] port ${port} is held by another program; trying ${port + 1}`);
+          break;
+        }
+        if (info.version === VERSION) {
+          console.error(`[recalld] v${VERSION} already running on port ${port} (pid ${info.pid})`);
+          process.exit(0);
+        }
+        console.error(
+          `[recalld] replacing v${info.version} daemon on port ${port} with v${VERSION}`,
+        );
+        await requestShutdown(port);
+        await sleep(500);
+        // second attempt on the same port
+      }
+    }
+  }
+  throw new Error(`no free port in ${BASE_PORT}-${BASE_PORT + PORT_TRIES - 1}`);
+}
+
+export async function startDaemon(): Promise<void> {
   getDb();
   const token = getOrCreateToken();
+
+  // Bind before the model warms so identity/handshake are answerable
+  // immediately; /recall /ingest just take a beat longer on first use.
+  let boundPort = BASE_PORT;
+  const handler: http.RequestListener = (req, res) =>
+    (makeHandler(token, boundPort) as any)(req, res);
+  const { port } = await acquirePort(handler);
+  boundPort = port;
+  console.error(`[recalld] listening on http://127.0.0.1:${port}`);
+
+  writeDaemonInfo({ service: SERVICE, version: VERSION, pid: process.pid, port, startedAt: STARTED_AT });
+  const cleanup = () => clearDaemonInfo();
+  process.on("exit", cleanup);
+  process.on("SIGINT", () => process.exit(0));
+  process.on("SIGTERM", () => process.exit(0));
+
+  // Optional extra bind (e.g. a Tailscale IP for phone access) — best-effort:
+  // if it's unavailable (Tailscale down at boot), keep serving localhost.
+  if (HOST !== "127.0.0.1") {
+    const extra = http.createServer(handler);
+    extra.on("error", (err: NodeJS.ErrnoException) => {
+      console.error(`[recalld] could not bind ${HOST} (${err.code}); serving localhost only`);
+    });
+    extra.listen(port, HOST, () => {
+      console.error(`[recalld] also listening on http://${HOST}:${port} (token required)`);
+    });
+  }
+
   console.error("[recalld] warming embedding model...");
   await warmup();
   console.error("[recalld] model ready");
-
-  // Always serve localhost (local hooks + MCP). If RECALL_BIND names another
-  // address (e.g. a Tailscale IP for phone access), serve that too — without
-  // exposing on the LAN. De-dupe so RECALL_BIND=127.0.0.1 doesn't double-bind.
-  const handler = makeHandler(token);
-  const hosts = Array.from(new Set(["127.0.0.1", HOST]));
-  for (const host of hosts) {
-    const primary = host === "127.0.0.1";
-    const server = http.createServer(handler);
-    server.on("error", (err: NodeJS.ErrnoException) => {
-      if (primary) {
-        if (err.code === "EADDRINUSE") process.exit(0); // another daemon owns localhost
-        console.error(`[recalld] fatal on ${host}:`, err.message);
-        process.exit(1);
-      } else {
-        // Secondary bind (e.g. a Tailscale IP) is best-effort: if it's
-        // unavailable (Tailscale down at boot), keep serving localhost.
-        console.error(`[recalld] could not bind ${host} (${err.code}); serving localhost only`);
-      }
-    });
-    server.listen(PORT, host, () => {
-      console.error(`[recalld] listening on http://${host}:${PORT}`);
-      if (!primary) {
-        console.error("[recalld] non-localhost bind: remote requests require the Bearer token");
-      }
-    });
-  }
 }
 
-main().catch((e) => {
+startDaemon().catch((e) => {
   console.error(e);
   process.exit(1);
 });

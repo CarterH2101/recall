@@ -1,26 +1,55 @@
+import fs from "node:fs";
 import { spawn } from "node:child_process";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { readDaemonInfo, identify, requestShutdown } from "./lifecycle.js";
+import { readManifest, runtimeEntry } from "../lib/install.js";
+import { VERSION } from "../lib/version.js";
 
-const PORT = Number(process.env.RECALL_PORT || 4319);
-const BASE = `http://127.0.0.1:${PORT}`;
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const SERVER = path.join(__dirname, "server.js");
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
+/**
+ * Where the daemon lives right now: explicit env wins, then the port the
+ * daemon advertised in daemon.json (it may have fallen back off 4319), then
+ * the default.
+ */
+export function daemonPort(): number {
+  if (process.env.RECALL_PORT) return Number(process.env.RECALL_PORT);
+  const info = readDaemonInfo();
+  if (info?.port) return info.port;
+  return 4319;
+}
+
+function base(): string {
+  return `http://127.0.0.1:${daemonPort()}`;
+}
+
 export async function health(timeoutMs = 400): Promise<boolean> {
-  try {
-    const res = await fetch(`${BASE}/health`, { signal: AbortSignal.timeout(timeoutMs) });
-    return res.ok;
-  } catch {
-    return false;
+  return (await identify(daemonPort(), timeoutMs)) !== null;
+}
+
+/**
+ * Resolve the daemon entry script. Prefer the stable ~/.recall/app runtime
+ * (works from plugin bundles, which have no adjacent server.js); fall back to
+ * the sibling file for clone/dev installs.
+ */
+function serverEntry(): string | null {
+  if (readManifest()) {
+    const installed = runtimeEntry("dist", "daemon", "server.js");
+    if (fs.existsSync(installed)) return installed;
   }
+  const sibling = path.join(__dirname, "server.js");
+  if (fs.existsSync(sibling)) return sibling;
+  return null;
 }
 
 /** Start the daemon detached so it outlives this short-lived hook process. */
 export function spawnDaemon(): void {
-  const child = spawn(process.execPath, [SERVER], {
+  const entry = serverEntry();
+  if (!entry) return; // plugin bundle with no runtime installed yet — fail open
+  const child = spawn(process.execPath, [entry], {
     detached: true,
     stdio: "ignore",
     windowsHide: true,
@@ -29,9 +58,31 @@ export function spawnDaemon(): void {
   child.unref();
 }
 
+/**
+ * Make sure the reachable daemon matches the installed runtime version; ask a
+ * stale one to shut down and respawn. Compares against the install manifest,
+ * not this module's own compiled version — a plugin bundle may be older or
+ * newer than the runtime it launches, and must not thrash the daemon over it.
+ * Used by non-latency-critical callers (stop hook, CLI) — the prompt hook
+ * stays on the fast fail-open path.
+ */
+export async function ensureCurrentDaemon(timeoutMs = 500): Promise<void> {
+  const info = await identify(daemonPort(), timeoutMs);
+  if (!info) {
+    spawnDaemon();
+    return;
+  }
+  const expected = readManifest()?.version ?? VERSION;
+  if (info.version !== expected) {
+    await requestShutdown(info.port);
+    await sleep(500);
+    spawnDaemon();
+  }
+}
+
 async function post(pathname: string, body: unknown, timeoutMs: number): Promise<any | null> {
   try {
-    const res = await fetch(`${BASE}${pathname}`, {
+    const res = await fetch(`${base()}${pathname}`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(body),
@@ -62,10 +113,11 @@ export async function recallRemote(
 }
 
 /**
- * Ingest for the stop hook. Tries the daemon; if it's down, spawns it, waits
- * for the model to warm, and retries once.
+ * Ingest for the stop hook. Tries the daemon; if it's down or stale, spawns
+ * the current version, waits for it, and retries once.
  */
 export async function ingestRemote(transcriptPath: string): Promise<any | null> {
+  await ensureCurrentDaemon();
   let r = await post("/ingest", { transcriptPath }, 5000);
   if (r !== null) return r;
 

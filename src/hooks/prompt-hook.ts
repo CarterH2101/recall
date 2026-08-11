@@ -1,4 +1,13 @@
+import fs from "node:fs";
+import os from "node:os";
+import path from "node:path";
 import { recallRemote } from "../daemon/client.js";
+import { readManifest } from "../lib/install.js";
+
+// Set by scripts/bundle-plugin.mjs (esbuild --define) in the plugin bundles;
+// undefined in the normal tsc build.
+declare const PLUGIN_BUILD: boolean | undefined;
+const IS_PLUGIN = typeof PLUGIN_BUILD !== "undefined" && PLUGIN_BUILD;
 
 // Claude Code UserPromptSubmit hook — the differentiator. Pulls relevant
 // context from PAST sessions and injects it into this prompt. Conservative
@@ -38,6 +47,26 @@ async function main(): Promise<void> {
   const prompt = payload.prompt;
   const sessionId = payload.session_id;
   if (!prompt || typeof prompt !== "string") return;
+
+  // Plugin installed but runtime not set up yet: nudge once per session,
+  // then stay silent. (npm installs always have a manifest after setup;
+  // clone/dev installs never enter this branch.)
+  if (IS_PLUGIN && !readManifest()) {
+    const marker = path.join(os.tmpdir(), `recall-nudge-${sessionId || "unknown"}`);
+    if (fs.existsSync(marker)) return;
+    try {
+      fs.writeFileSync(marker, "1");
+    } catch {
+      /* still nudge */
+    }
+    process.stdout.write(
+      JSON.stringify({
+        systemMessage:
+          "🧠 recall plugin is installed but its runtime isn't set up. Run /recall:setup to finish (one-time, ~5 min).",
+      }),
+    );
+    return;
+  }
 
   const snippets = await recallRemote(
     prompt,

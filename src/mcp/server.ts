@@ -4,60 +4,20 @@ import {
   CallToolRequestSchema,
   ListToolsRequestSchema,
 } from "@modelcontextprotocol/sdk/types.js";
-import { recall, recentSessions, type Snippet } from "../lib/recall.js";
+import { TOOLS, formatSnippets, daemonUp, daemonRecall, daemonRecent } from "./shared.js";
+import { VERSION } from "../lib/version.js";
 
-function formatSnippets(snippets: Snippet[]): string {
-  if (!snippets.length) return "No relevant past context found.";
-  return snippets
-    .map((s, i) => {
-      const when = s.ts ? s.ts.slice(0, 10) : "unknown date";
-      const where = s.project ? ` · ${s.project}` : "";
-      return `### ${i + 1}. ${s.role} (${when}${where}, score ${s.score.toFixed(2)})\n${s.content}`;
-    })
-    .join("\n\n");
-}
+// MCP stdio server. Daemon-first: queries go over HTTP so this process never
+// loads its own copy of the embedding model. Only if the daemon can't come up
+// does it fall back to the in-process library (lazy import — the heavy stack
+// stays unloaded on the happy path).
 
 const server = new Server(
-  { name: "recall", version: "0.0.1" },
+  { name: "recall", version: VERSION },
   { capabilities: { tools: {} } },
 );
 
-server.setRequestHandler(ListToolsRequestSchema, async () => ({
-  tools: [
-    {
-      name: "recall",
-      description:
-        "Search the user's past AI coding sessions (raw transcripts, all projects, local index). " +
-        "Use when resuming prior work, or when you need a detail curated memory files don't hold: " +
-        "an exact error message, a command or query that worked, a decision made in a one-off session. " +
-        "Results are Q+A units (matched turn paired with its reply) with date, project, and score. " +
-        "Try it before saying you don't remember something the user says happened before.",
-      inputSchema: {
-        type: "object",
-        properties: {
-          query: { type: "string", description: "What to look for in past sessions." },
-          limit: { type: "number", description: "Max snippets to return (default 5)." },
-          project: { type: "string", description: "Optional: restrict to a project name." },
-          minScore: {
-            type: "number",
-            description: "Optional: minimum cosine similarity 0..1 (default 0).",
-          },
-        },
-        required: ["query"],
-      },
-    },
-    {
-      name: "recent_sessions",
-      description: "List your most recent captured coding sessions with project and turn counts.",
-      inputSchema: {
-        type: "object",
-        properties: {
-          limit: { type: "number", description: "Max sessions to return (default 10)." },
-        },
-      },
-    },
-  ],
-}));
+server.setRequestHandler(ListToolsRequestSchema, async () => ({ tools: TOOLS }));
 
 server.setRequestHandler(CallToolRequestSchema, async (req) => {
   const { name, arguments: args = {} } = req.params as {
@@ -66,6 +26,11 @@ server.setRequestHandler(CallToolRequestSchema, async (req) => {
   };
 
   if (name === "recall") {
+    if (await daemonUp()) {
+      const snippets = await daemonRecall(args);
+      if (snippets) return { content: [{ type: "text", text: formatSnippets(snippets) }] };
+    }
+    const { recall } = await import("../lib/recall.js");
     const snippets = await recall(String(args.query ?? ""), {
       limit: typeof args.limit === "number" ? args.limit : undefined,
       project: typeof args.project === "string" ? args.project : undefined,
@@ -76,6 +41,15 @@ server.setRequestHandler(CallToolRequestSchema, async (req) => {
 
   if (name === "recent_sessions") {
     const limit = typeof args.limit === "number" ? args.limit : 10;
+    if (await daemonUp()) {
+      const sessions = await daemonRecent();
+      if (sessions) {
+        return {
+          content: [{ type: "text", text: JSON.stringify(sessions.slice(0, limit), null, 2) }],
+        };
+      }
+    }
+    const { recentSessions } = await import("../lib/recall.js");
     return {
       content: [{ type: "text", text: JSON.stringify(recentSessions(limit), null, 2) }],
     };

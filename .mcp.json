@@ -1,0 +1,6 @@
+{
+  "recall": {
+    "command": "node",
+    "args": ["${CLAUDE_PLUGIN_ROOT}/plugin/dist/mcp-proxy.mjs"]
+  }
+}

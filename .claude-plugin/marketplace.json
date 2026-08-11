@@ -1,0 +1,14 @@
+{
+  "name": "recall",
+  "owner": {
+    "name": "CarterH2101",
+    "url": "https://github.com/CarterH2101"
+  },
+  "plugins": [
+    {
+      "name": "recall",
+      "source": "./",
+      "description": "Local-first memory for your coding agents — auto-recall of past sessions, recall MCP tool, fully on-device."
+    }
+  ]
+}
