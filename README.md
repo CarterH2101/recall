@@ -207,6 +207,11 @@ Self-host the hub: [recall-sync-server](https://github.com/CarterH2101/recall-sy
 plainly, including what this design does *not* defend against. v1 shared-key
 teams upgrade in place with `recalld sync upgrade`.
 
+**Hosted team sync (early access):** don't want to run a hub? Sign up at
+[recall-console.vercel.app](https://recall-console.vercel.app) — the hosted
+console manages seats and billing while holding zero keys: it cannot read
+your team's facts or even render your roster by name.
+
 ## Roadmap
 
 - Cursor / Gemini CLI capture adapters.
