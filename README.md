@@ -2,6 +2,9 @@
 
 **Local-first memory for your coding agents — cross-session and cross-agent.**
 
+<img src="https://raw.githubusercontent.com/CarterH2101/recall/main/assets/demo.svg" alt="recall demo: one-command install, past context injected into new prompts, cross-agent memory between Codex and Claude Code, and secret redaction" width="880">
+
+
 Your AI coding sessions are full of decisions, approaches, and answers that
 evaporate the moment the session ends. `recall` captures your **Claude Code
 and Codex CLI** sessions, indexes them **entirely on your own machine**, and:

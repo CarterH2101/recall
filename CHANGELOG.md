@@ -4,6 +4,27 @@ All notable changes to this project are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and versions follow
 [Semantic Versioning](https://semver.org/).
 
+## [1.0.1] — 2026-08-11
+
+### Added
+- Redesigned local viewer: warm paper ledger aesthetic (OKLCH light + dark),
+  inline fact editing, hash navigation, teaching empty states, reduced-motion
+  support. Animated demo in the README.
+
+### Changed
+- Hook status line simplified to `recall: injected N snippets`.
+- Windows now requires Node 22+ (better-sqlite3 ships no win32 prebuilds for
+  Node 20); setup preflights this with a clear message.
+- Copy corrections across README; Siri voice-access feature removed.
+
+### Fixed
+- **Injection-log queries now pass through redaction before storage** (raw
+  prompts can carry secrets just like turns); `recalld redact --backfill`
+  also sweeps existing log rows.
+- vec0 vector updates use delete+insert (no OR REPLACE support upstream).
+- CI: node-abi refresh for Node 20.20.x prebuild mapping, cross-version test
+  runner, pack-check stdout purity.
+
 ## [1.0.0] — 2026-08-11
 
 Team sync — the memory pool becomes shareable, without the server ever
