@@ -4,7 +4,7 @@
     .dim{ fill: #8a8375; }
     .acc{ fill: #d08a3a; }
     .ok { fill: #86b076; }
-    .l  { opacity: 0; animation-duration: 30s; animation-iteration-count: infinite; animation-timing-function: linear; }
+    .l  { opacity: 0; animation-duration: 48s; animation-iteration-count: infinite; animation-timing-function: linear; }
 
     @keyframes k1  { 1%,21%   { opacity: 1; } 0%,0.5%,23%,100% { opacity: 0; } }
     @keyframes k2  { 4%,21%   { opacity: 1; } 0%,3.5%,23%,100% { opacity: 0; } }
