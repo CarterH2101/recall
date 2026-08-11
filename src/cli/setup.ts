@@ -138,5 +138,7 @@ Next:
   - Optional: voice access via Siri — see docs/siri.md
   - Kill switch: set RECALL_ENABLED=false to disable auto-inject.
 `);
-  process.exit(0);
+  // No process.exit here: the detached daemon child is unref'd, so the
+  // process ends naturally — exiting explicitly races libuv handle teardown
+  // on Windows (assertion in win/async.c).
 }

@@ -82,21 +82,26 @@ export function installRuntime(spec = `recalld@${VERSION}`): boolean {
   fs.mkdirSync(appDir(), { recursive: true });
   // --install-links: directory specs are copied, not symlinked, so the
   // runtime survives its install source disappearing (npx cache eviction).
-  const r = spawnSync(
-    process.platform === "win32" ? "npm.cmd" : "npm",
-    [
-      "install",
-      "--prefix",
-      appDir(),
-      "--install-links",
-      "--no-audit",
-      "--no-fund",
-      "--loglevel",
-      "error",
-      spec,
-    ],
-    { stdio: "inherit", shell: process.platform === "win32" },
-  );
+  const args = [
+    "install",
+    "--prefix",
+    appDir(),
+    "--install-links",
+    "--no-audit",
+    "--no-fund",
+    "--loglevel",
+    "error",
+    spec,
+  ];
+  // Windows: npm is npm.cmd, which node refuses to spawn without a shell —
+  // and shell spawns want one pre-quoted command string, not an args array.
+  // The command name must stay bare (quoting it makes cmd.exe pick the wrong
+  // npm shim); only args with spaces get quotes.
+  const quote = (a: string) => (/[\s"]/.test(a) ? `"${a.replace(/"/g, '\\"')}"` : a);
+  const r =
+    process.platform === "win32"
+      ? spawnSync(`npm ${args.map(quote).join(" ")}`, { stdio: "inherit", shell: true })
+      : spawnSync("npm", args, { stdio: "inherit" });
   return r.status === 0;
 }
 
