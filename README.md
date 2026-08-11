@@ -141,16 +141,28 @@ npm run setup            # install this checkout as the runtime
 npm run bundle-plugin    # regenerate committed plugin bundles (CI checks freshness)
 ```
 
+## Team sync (optional)
+
+Pool distilled facts across a team without the server ever reading them:
+facts are AES-256-GCM encrypted with a shared team key before leaving your
+machine, the hub stores opaque blobs, and teammates re-embed locally —
+embeddings never travel. Sharing is per-fact opt-in, raw transcripts never
+sync, and a redaction gate hard-blocks anything secret-shaped at push.
+
+```
+recalld sync init --server https://your-hub    # create team, print invite
+recalld sync join <invite>                     # on a teammate's machine
+recalld sync share <fact-id> && recalld sync now
+```
+
+Self-host the hub: [recall-sync-server](https://github.com/CarterH2101/recall-sync-server)
+(single container, SQLite, BSL 1.1).
+
 ## Roadmap
 
-- **Codex CLI capture adapter** — makes memory cross-agent, not just
-  cross-session.
-- Secret redaction on ingest.
-- Retrieval-quality eval harness (measured, regression-gated retrieval changes).
-- Distilled durable facts, promoted from raw history.
-- Local memory viewer UI.
-- Cursor / Gemini CLI adapters.
-- Optional E2E-encrypted team sync (facts only, opt-in, redaction-gated).
+- Cursor / Gemini CLI capture adapters.
+- Per-member team identity + key rotation (sync v2).
+- Long-turn chunking for finer retrieval.
 
 ## License
 

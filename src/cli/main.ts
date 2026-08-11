@@ -26,6 +26,7 @@ Usage: recalld <command> [options]
   eval             Retrieval-quality harness (run|seed|label|build-fixture)
   distill          Promote durable facts from raw history (dry-run; --apply)
   facts            Manage distilled facts (list|add|edit|pin|archive|rm)
+  sync             Team sync (init|join|now|push|pull|status|share|unshare)
   mcp              Run the MCP stdio server
   install-hooks    (Re)register Claude Code hooks only
   reproject        Recompute project labels after config changes
@@ -90,6 +91,10 @@ async function main(): Promise<void> {
     }
     case "eval": {
       const m = await import("./eval.js");
+      return m.run(rest);
+    }
+    case "sync": {
+      const m = await import("./sync.js");
       return m.run(rest);
     }
     case "distill": {

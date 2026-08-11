@@ -131,7 +131,7 @@ export async function editFact(id: string, content: string): Promise<void> {
   if (rowid === null) throw new Error(`no fact ${id}`);
   const trimmed = content.trim().slice(0, MAX_FACT_CHARS);
   db.prepare(
-    `UPDATE facts SET content = ?, content_hash = ?, edited = 1, updated_at = ? WHERE id = ?`,
+    `UPDATE facts SET content = ?, content_hash = ?, edited = 1, updated_at = ?, version = version + 1 WHERE id = ?`,
   ).run(trimmed, contentHash(trimmed), new Date().toISOString(), id);
   const vec = await _embed(trimmed);
   // vec0 virtual tables don't implement conflict resolution — no OR REPLACE.
@@ -143,11 +143,9 @@ export async function editFact(id: string, content: string): Promise<void> {
 }
 
 export function setPinned(id: string, pinned: boolean): void {
-  getDb().prepare(`UPDATE facts SET pinned = ?, updated_at = ? WHERE id = ?`).run(
-    pinned ? 1 : 0,
-    new Date().toISOString(),
-    id,
-  );
+  getDb()
+    .prepare(`UPDATE facts SET pinned = ?, updated_at = ?, version = version + 1 WHERE id = ?`)
+    .run(pinned ? 1 : 0, new Date().toISOString(), id);
 }
 
 /** Archived facts keep their row but lose their vector — they can never rank. */
@@ -155,7 +153,7 @@ export async function setArchived(id: string, archived: boolean): Promise<void> 
   const db = getDb();
   const rowid = rowidOf(id);
   if (rowid === null) throw new Error(`no fact ${id}`);
-  db.prepare(`UPDATE facts SET archived = ?, updated_at = ? WHERE id = ?`).run(
+  db.prepare(`UPDATE facts SET archived = ?, updated_at = ?, version = version + 1 WHERE id = ?`).run(
     archived ? 1 : 0,
     new Date().toISOString(),
     id,

@@ -4,6 +4,41 @@ All notable changes to this project are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and versions follow
 [Semantic Versioning](https://semver.org/).
 
+## [1.0.0] — 2026-08-11
+
+Team sync — the memory pool becomes shareable, without the server ever
+reading it.
+
+### Added
+- **`recalld sync`** (migration v5): `init --server <url>` creates a team and
+  prints a single invite code; `join <invite>`; `now|push|pull`; `status`;
+  `share <id> [--allow-secret]` / `share --all [--project P]` / `unshare`.
+  Sharing is per-fact opt-in — nothing syncs by default, raw turns never sync.
+- **True E2E encryption**: facts are AES-256-GCM encrypted with the shared
+  team key before leaving the machine (op id bound as AAD — no replay under
+  another id). The hub stores opaque blobs; pulled facts are re-embedded
+  locally, so embeddings never travel. Home-directory paths are rewritten to
+  `~` in transit.
+- **Redaction hard gate at push**: a secret hit blocks the fact with the rule
+  names printed; override is per-fact (`share <id> --allow-secret`), never
+  global.
+- **Conflict handling**: last-writer-wins on (version, timestamp, device);
+  an unsynced local edit that loses is preserved as a visible `[conflict]`
+  copy, never silently dropped.
+- **Stateless-retry push**: no outbox table — push diffs `shared` facts whose
+  version is ahead of `synced_version`, with deterministic op ids
+  (`device:fact:version`), so crashed/retried pushes are idempotent by
+  construction.
+- Daemon syncs every 5 minutes when a team is configured (best-effort; a down
+  hub never affects local operation).
+- **Server**: separate repo `recall-sync-server` (BSL 1.1, converts to
+  Apache-2.0 in 2030) — a single-container append-only ciphertext log with
+  team bearer auth, SQLite/WAL storage, and idempotent op ingestion. Wire
+  protocol documented in both repos.
+- End-to-end verification script (`scripts/verify-sync-e2e.mjs`): two
+  isolated client processes + a real hub — 12 checks including
+  hub-sees-no-plaintext and the conflict-copy path.
+
 ## [0.5.0] — 2026-08-11
 
 Your memory has a face now.

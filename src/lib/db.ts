@@ -98,6 +98,20 @@ const MIGRATIONS: ((db: Database.Database) => void)[] = [
       processed_at TEXT NOT NULL
     );
   `),
+  /* v5 — team sync: per-fact share/version state + pull cursor */
+  (db) =>
+    db.exec(`
+    ALTER TABLE facts ADD COLUMN shared INTEGER NOT NULL DEFAULT 0; -- 0 no, 1 yes, 2 yes+secret-override
+    ALTER TABLE facts ADD COLUMN version INTEGER NOT NULL DEFAULT 0;
+    ALTER TABLE facts ADD COLUMN synced_version INTEGER NOT NULL DEFAULT -1;
+    ALTER TABLE facts ADD COLUMN origin_device TEXT;
+
+    CREATE TABLE sync_state (
+      team_id   TEXT PRIMARY KEY,
+      last_seq  INTEGER NOT NULL DEFAULT 0,
+      last_sync TEXT
+    );
+  `),
 ];
 
 /** Current schema version — what a fully migrated db's user_version equals. */

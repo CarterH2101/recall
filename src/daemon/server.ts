@@ -309,6 +309,24 @@ export async function startDaemon(): Promise<void> {
   // Watch push-less sources (Codex rollouts). After warmup so the catch-up
   // sweep doesn't race the model download.
   startWatchers();
+
+  // Team sync heartbeat, only when configured. Best-effort: a down hub never
+  // affects local operation.
+  const { loadSyncConfig, push, pull } = await import("../lib/sync.js");
+  if (loadSyncConfig()) {
+    const beat = async () => {
+      try {
+        const cfg = loadSyncConfig();
+        if (!cfg) return;
+        await push(cfg);
+        await pull(cfg);
+      } catch (e) {
+        console.error(`[sync] heartbeat failed: ${(e as Error).message}`);
+      }
+    };
+    setInterval(beat, 5 * 60_000).unref();
+    void beat();
+  }
 }
 
 startDaemon().catch((e) => {

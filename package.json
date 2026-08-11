@@ -1,6 +1,6 @@
 {
   "name": "recalld",
-  "version": "0.5.0",
+  "version": "1.0.0",
   "description": "Local-first cross-agent memory for coding agents. Captures your Claude Code sessions, embeds them on your machine, and auto-injects relevant past context into new sessions. No cloud, no account, no API key.",
   "type": "module",
   "license": "MIT",
