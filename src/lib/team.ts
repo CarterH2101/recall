@@ -438,7 +438,6 @@ export async function pushV2(cfg: TeamConfigV2): Promise<PushResult> {
     const pendingFacts = db
       .prepare(`SELECT * FROM facts WHERE shared > 0 AND version > synced_version`)
       .all() as (Fact & { shared: number; version: number })[];
-    if (!pendingFacts.length) return result;
     result.blocked = [];
 
     const ops: any[] = [];
@@ -462,15 +461,42 @@ export async function pushV2(cfg: TeamConfigV2): Promise<PushResult> {
       });
       sendable.push(f);
     }
+    // Curation labels ride the same encrypted channel.
+    const pendingLabels = db
+      .prepare(`SELECT * FROM fact_labels WHERE member_id = ? AND version > synced_version`)
+      .all(cfg.memberId) as any[];
+    for (const l of pendingLabels) {
+      const id = `${cfg.deviceId}:label:${l.fact_id}:${l.version}`;
+      const payload = encryptOpV2(cfg.gens[String(cfg.currentGen)], cfg.teamId, id, cfg.currentGen, cfg.memberId, {
+        factId: l.fact_id,
+        verdict: l.verdict,
+        ts: l.ts,
+      });
+      ops.push({
+        op_id: id,
+        device_id: cfg.deviceId,
+        kind: "fact_label",
+        key_gen: cfg.currentGen,
+        payload: payload.toString("base64"),
+        op_sig: signPayload(cfg.signPriv, opSigPayload(cfg.teamId, id, cfg.currentGen, payload)),
+      });
+    }
+
     if (!ops.length) return result;
 
     try {
       const r = await api2(cfg, "POST", `/v1/${cfg.teamId}/ops`, { ops });
       const mark = db.prepare(`UPDATE facts SET synced_version = ? WHERE id = ?`);
+      const markLabel = db.prepare(`UPDATE fact_labels SET synced_version = ? WHERE fact_id = ? AND member_id = ?`);
       const tx = db.transaction(() => {
         for (let i = 0; i < sendable.length; i++) {
           mark.run(sendable[i].version, sendable[i].id);
           if (r.results[i]?.deduped) result.deduped++;
+          else result.sent++;
+        }
+        for (let i = 0; i < pendingLabels.length; i++) {
+          markLabel.run(pendingLabels[i].version, pendingLabels[i].fact_id, cfg.memberId);
+          if (r.results[sendable.length + i]?.deduped) result.deduped++;
           else result.sent++;
         }
       });
@@ -531,7 +557,20 @@ export async function pullV2(cfg: TeamConfigV2): Promise<PullResult> {
         console.error(`[team] cannot decrypt op ${op.op_id} — wrong key or tampering; skipped`);
         continue;
       }
-      if (op.kind === "fact_label") continue; // arrives in T2
+      if (op.kind === "fact_label") {
+        // LWW per (fact, member) on timestamp; teammate labels feed the
+        // bounded curation boost at recall time.
+        const l = wire as any;
+        db.prepare(
+          `INSERT INTO fact_labels (fact_id, member_id, verdict, ts, version, synced_version)
+           VALUES (?, ?, ?, ?, 1, 1)
+           ON CONFLICT(fact_id, member_id) DO UPDATE SET
+             verdict = excluded.verdict, ts = excluded.ts
+           WHERE excluded.ts > fact_labels.ts`,
+        ).run(l.factId, op.member_id, l.verdict, l.ts);
+        result.applied++;
+        continue;
+      }
       const applied = await applyRemoteFact({ deviceId: cfg.deviceId } as any, wire, op.kind, op.member_id ?? null);
       if (applied === "applied") result.applied++;
       if (applied === "conflict") {

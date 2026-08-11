@@ -126,6 +126,19 @@ const MIGRATIONS: ((db: Database.Database) => void)[] = [
       status    TEXT NOT NULL DEFAULT 'active'
     );
   `),
+  /* v7 — team curation: per-member fact labels (LWW per (fact, member)) */
+  (db) =>
+    db.exec(`
+    CREATE TABLE fact_labels (
+      fact_id        TEXT NOT NULL,
+      member_id      TEXT NOT NULL,
+      verdict        TEXT NOT NULL CHECK (verdict IN ('useful','noise')),
+      ts             TEXT NOT NULL,
+      version        INTEGER NOT NULL DEFAULT 1,
+      synced_version INTEGER NOT NULL DEFAULT -1,
+      PRIMARY KEY (fact_id, member_id)
+    );
+  `),
 ];
 
 /** Current schema version — what a fully migrated db's user_version equals. */

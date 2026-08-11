@@ -21,6 +21,7 @@ export interface Snippet {
   kind?: "turn" | "fact";
   factId?: string;
   factKind?: string;
+  via?: string; // teammate name for team-synced facts
 }
 
 /** A scored KNN match before thresholding/dedup/pairing — the eval harness
@@ -184,6 +185,7 @@ export interface FactMatch {
   pinned: boolean;
   sourceTurnIds: string[];
   score: number;
+  via: string | null; // teammate display name for synced facts
 }
 
 export async function recallFactMatches(
@@ -203,12 +205,34 @@ export async function recallFactMatches(
   } catch {
     return []; // pre-v4 database
   }
-  const byRow = db.prepare(`SELECT * FROM facts WHERE rowid = ?`);
+  // origin_member/team_members arrive in later migrations; tolerate their
+  // absence so recall works mid-upgrade.
+  let byRow;
+  let labelNet: any = null;
+  try {
+    byRow = db.prepare(
+      `SELECT f.*, tm.name AS via FROM facts f
+       LEFT JOIN team_members tm ON tm.member_id = f.origin_member
+       WHERE f.rowid = ?`,
+    );
+    labelNet = db.prepare(
+      `SELECT SUM(CASE verdict WHEN 'useful' THEN 1 ELSE -1 END) net FROM fact_labels WHERE fact_id = ?`,
+    );
+  } catch {
+    byRow = db.prepare(`SELECT f.*, NULL AS via FROM facts f WHERE f.rowid = ?`);
+  }
+
   const out: FactMatch[] = [];
   for (const m of matches) {
     const f = byRow.get(m.rowid) as any;
     if (!f || f.archived) continue;
     if (opts.project && f.project !== opts.project) continue;
+    // Team curation: bounded so popularity never beats relevance.
+    let curation = 0;
+    if (labelNet) {
+      const net = (labelNet.get(f.id) as any)?.net ?? 0;
+      curation = 0.01 * Math.max(-2, Math.min(4, net));
+    }
     out.push({
       factId: f.id,
       factKind: f.kind,
@@ -217,7 +241,8 @@ export async function recallFactMatches(
       updatedAt: f.updated_at,
       pinned: !!f.pinned,
       sourceTurnIds: JSON.parse(f.source_turn_ids),
-      score: 1 - m.distance + FACT_BOOST + (f.pinned ? PIN_BOOST : 0),
+      score: 1 - m.distance + FACT_BOOST + (f.pinned ? PIN_BOOST : 0) + curation,
+      via: f.via ?? null,
     });
   }
   out.sort((a, b) => b.score - a.score);
@@ -260,6 +285,7 @@ export async function recall(query: string, opts: RecallOpts = {}): Promise<Snip
     kind: "fact" as const,
     factId: f.factId,
     factKind: f.factKind,
+    via: f.via ?? undefined,
   }));
 
   return [...factSnippets, ...turnSnippets]

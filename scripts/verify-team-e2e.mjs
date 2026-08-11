@@ -82,6 +82,17 @@ if (process.argv[2] === "step") {
     } catch (e) {
       out.error = String(e.status ?? e.message);
     }
+  } else if (step === "label-push") {
+    const c = cfg();
+    await team.refreshTeamState(c);
+    facts.setFactLabel(env.FACT_ID, c.memberId, env.VERDICT);
+    out.push = await team.pushV2(c);
+  } else if (step === "check-label") {
+    const c = cfg();
+    await team.refreshTeamState(c);
+    out.pull = await team.pullV2(c);
+    out.labels = db.prepare(`SELECT member_id, verdict FROM fact_labels WHERE fact_id = ?`).all(env.FACT_ID);
+    out.boost = facts.factLabelBoost(env.FACT_ID);
   } else if (step === "new-invite") {
     const c = cfg();
     await team.refreshTeamState(c);
@@ -108,7 +119,9 @@ if (process.argv[2] === "step") {
     out.invite = await team.issueInvite(c);
   }
 
-  console.log("###" + JSON.stringify(out));
+  // Synchronous write: console.log to a pipe is async on Windows and
+  // process.exit can truncate it (and onnxruntime teardown may assert).
+  fs.writeSync(1, "###" + JSON.stringify(out) + "\n");
   process.exit(0);
 }
 
@@ -199,6 +212,16 @@ check("B's stale push self-heals via 409", stale.push.sent === 1 && stale.genBef
 
 const ap2 = on("a", "pull", {});
 check("A pulls B's gen-2 op", ap2.pull.applied === 1, JSON.stringify(ap2.pull));
+
+/* --- curation labels sync with attribution --- */
+const lb = on("b", "label-push", { FACT_ID: ap.factId, VERDICT: "useful" });
+check("B's label pushed", lb.push.sent === 1, JSON.stringify(lb.push));
+const la = on("a", "check-label", { FACT_ID: ap.factId });
+check(
+  "A received B's label + bounded boost",
+  la.labels.some((l) => l.verdict === "useful") && Math.abs(la.boost - 0.01) < 1e-9,
+  JSON.stringify({ labels: la.labels, boost: la.boost }),
+);
 
 /* --- revocation --- */
 const inv2 = on("a", "new-invite");

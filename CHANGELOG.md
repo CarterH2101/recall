@@ -4,6 +4,22 @@ All notable changes to this project are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and versions follow
 [Semantic Versioning](https://semver.org/).
 
+## [1.2.0] — 2026-08-11
+
+Shared memory feels alive: you can see whose it is and whether it's earning
+its place.
+
+### Added
+- **Attribution everywhere** (migration v7): synced facts show
+  "via <teammate>" in the viewer and in the injection line
+  (`📌 [gotcha · via Alice] …`); a Team panel on the Stats tab lists members
+  by their E2E-decrypted names — a list the hub itself cannot render.
+- **Curation labels sync**: useful/noise verdicts on teammates' facts travel
+  as encrypted `fact_label` ops (LWW per member per fact) and apply a
+  **bounded** ranking adjustment: +0.01 × net-useful, clamped to [−2, +4] —
+  popularity can nudge, relevance decides.
+- Viewer: label buttons on team facts, net-useful count under attribution.
+
 ## [1.1.0] — 2026-08-11
 
 Team sync grows real identity. This is the release that makes revoking a

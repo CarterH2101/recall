@@ -259,7 +259,19 @@ views.stats = async () => {
         ${s.bySource.map((r) => `<tr><td class="mono">${esc(r.source_agent)}</td><td class="mono" style="text-align:right">${r.n.toLocaleString()}</td></tr>`).join("")}
       </table>
     </section>
+    <section id="team-section"></section>
   `);
+  api("/api/team").then((t) => {
+    if (!t.members.length) return;
+    $("#team-section").innerHTML = `
+      <span class="label">Team · names decrypted locally, the hub cannot render this list</span>
+      <table style="max-width:520px">
+        ${t.members.map((m) => `
+          <tr><td>${m.status === "revoked" ? "✗" : "•"} ${esc(m.name ?? "(unnamed)")}</td>
+          <td class="mono dim">${esc(m.member_id.slice(0, 10))}…</td>
+          <td class="mono dim">${esc(m.role)}${m.status === "revoked" ? " · revoked" : ""}</td></tr>`).join("")}
+      </table>`;
+  }).catch(() => {});
 };
 
 /* ---------------- search ---------------- */
@@ -366,11 +378,14 @@ views.facts = async (archived = 0) => {
             <td><span class="kind ${esc(f.kind)}">${esc(f.kind)}</span></td>
             <td class="fact-content">
               ${f.pinned ? `<span class="flag" title="pinned">▪ </span>` : ""}<span id="fc-${sid}">${esc(f.content)}</span>
+              ${f.via ? `<div class="mono dim" style="margin-top:3px">via ${esc(f.via)}${f.label_net ? ` · ${f.label_net > 0 ? "+" : ""}${f.label_net} useful` : ""}</div>` : ""}
               <div id="ed-${sid}"></div>
             </td>
             <td class="mono dim">${esc(f.project ?? "")}</td>
             <td class="mono dim" style="white-space:nowrap">${fmtDay(f.updated_at)}</td>
             <td style="white-space:nowrap; text-align:right">
+              ${f.via ? `<button class="act" onclick="labelFact('${f.id}','useful',this)">useful</button>
+              <button class="act" onclick="labelFact('${f.id}','noise',this)">noise</button>` : ""}
               <button class="act" onclick="editFactUi('${f.id}','${sid}')">edit</button>
               <button class="act" onclick="patchFact('${f.id}',{pinned:${!f.pinned}})">${f.pinned ? "unpin" : "pin"}</button>
               <button class="act" onclick="patchFact('${f.id}',{archived:${!archived}})">${archived ? "restore" : "archive"}</button>
@@ -391,6 +406,11 @@ window.addFact = async () => {
 window.patchFact = async (id, patch) => {
   await api(`/api/facts/${id}`, { method: "PATCH", body: JSON.stringify(patch) });
   views.facts();
+};
+window.labelFact = async (id, verdict, btn) => {
+  await api(`/api/facts/${id}/label`, { method: "POST", body: JSON.stringify({ verdict }) });
+  btn.textContent = verdict + " ✓";
+  btn.disabled = true;
 };
 window.editFactUi = (id, sid) => {
   const span = $(`#fc-${sid}`);

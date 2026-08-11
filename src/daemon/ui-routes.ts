@@ -149,9 +149,50 @@ export async function handleUiRoute(
     let facts = listFacts({
       archived: url.searchParams.get("archived") === "1",
       project: url.searchParams.get("project") ?? undefined,
-    });
+    }) as any[];
     if (q) facts = facts.filter((f) => f.content.toLowerCase().includes(q));
+    // Attribution + curation totals (tables exist from migration v6/v7).
+    try {
+      const via = db.prepare(`SELECT name FROM team_members WHERE member_id = ?`);
+      const net = db.prepare(
+        `SELECT SUM(CASE verdict WHEN 'useful' THEN 1 ELSE -1 END) net FROM fact_labels WHERE fact_id = ?`,
+      );
+      facts = facts.map((f) => ({
+        ...f,
+        via: f.origin_member ? ((via.get(f.origin_member) as any)?.name ?? null) : null,
+        label_net: (net.get(f.id) as any)?.net ?? 0,
+      }));
+    } catch {
+      /* pre-v7 database */
+    }
     json(res, 200, facts);
+    return true;
+  }
+
+  if (req.method === "GET" && p === "/api/team") {
+    try {
+      const members = db
+        .prepare(`SELECT member_id, name, role, status FROM team_members ORDER BY role DESC, name`)
+        .all();
+      json(res, 200, { members });
+    } catch {
+      json(res, 200, { members: [] });
+    }
+    return true;
+  }
+
+  const factLabel = p.match(/^\/api\/facts\/([^/]+)\/label$/);
+  if (req.method === "POST" && factLabel) {
+    const b = await readBody(req);
+    if (b.verdict !== "useful" && b.verdict !== "noise") {
+      json(res, 400, { error: "verdict must be useful|noise" });
+      return true;
+    }
+    const { setFactLabel } = await import("../lib/facts.js");
+    const { loadSyncConfig } = await import("../lib/sync.js");
+    const cfg = loadSyncConfig() as any;
+    setFactLabel(decodeURIComponent(factLabel[1]), cfg?.memberId ?? cfg?.deviceId ?? "local", b.verdict);
+    json(res, 200, { ok: true });
     return true;
   }
 

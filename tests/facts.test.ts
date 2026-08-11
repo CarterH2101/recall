@@ -85,6 +85,23 @@ test("facts CRUD + dedup/merge semantics", async (t) => {
   });
 });
 
+test("fact label boost is bounded on both sides", async () => {
+  const facts = await import("../src/lib/facts.js");
+  const id = "boost-test-fact";
+  for (let i = 0; i < 8; i++) facts.setFactLabel(id, `m${i}`, "useful");
+  assert.equal(facts.factLabelBoost(id), 0.04); // clamped at +4 net
+  for (let i = 0; i < 8; i++) facts.setFactLabel(id, `m${i}`, "noise");
+  for (let i = 8; i < 12; i++) facts.setFactLabel(id, `m${i}`, "noise");
+  assert.equal(facts.factLabelBoost(id), -0.02); // clamped at -2 net
+  // relabeling is an upsert, not a duplicate vote
+  facts.setFactLabel(id, "m0", "useful");
+  facts.setFactLabel(id, "m0", "useful");
+  const rows = (await import("../src/lib/db.js")).getDb()
+    .prepare(`SELECT COUNT(*) n FROM fact_labels WHERE fact_id = ? AND member_id = 'm0'`)
+    .get(id) as any;
+  assert.equal(rows.n, 1);
+});
+
 test("recallFactMatches ranks facts with boost and respects archive", async () => {
   const facts = await import("../src/lib/facts.js");
   const { recallFactMatches, setQueryEmbedder } = await import("../src/lib/recall.js");

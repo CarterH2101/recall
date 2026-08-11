@@ -194,3 +194,31 @@ export function listFacts(opts: { archived?: boolean; project?: string } = {}): 
 export function getFact(id: string): Fact | null {
   return (getDb().prepare(`SELECT * FROM facts WHERE id = ?`).get(id) as Fact) ?? null;
 }
+
+/* ---------- team curation labels ---------- */
+
+/** Record my verdict on a fact. `memberId` is the local member identity (or
+ *  the device id outside a team). Re-labeling bumps version for sync. */
+export function setFactLabel(factId: string, memberId: string, verdict: "useful" | "noise"): void {
+  getDb()
+    .prepare(
+      `INSERT INTO fact_labels (fact_id, member_id, verdict, ts, version)
+       VALUES (?, ?, ?, ?, 1)
+       ON CONFLICT(fact_id, member_id) DO UPDATE SET
+         verdict = excluded.verdict, ts = excluded.ts,
+         version = fact_labels.version + 1`,
+    )
+    .run(factId, memberId, verdict, new Date().toISOString());
+}
+
+/** Bounded team-curation signal: net useful votes, clamped so popularity can
+ *  never outrank relevance. */
+export function factLabelBoost(factId: string): number {
+  const r = getDb()
+    .prepare(
+      `SELECT SUM(CASE verdict WHEN 'useful' THEN 1 ELSE -1 END) net FROM fact_labels WHERE fact_id = ?`,
+    )
+    .get(factId) as any;
+  const net = r?.net ?? 0;
+  return 0.01 * Math.max(-2, Math.min(4, net));
+}
