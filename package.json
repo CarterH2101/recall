@@ -35,7 +35,7 @@
   "scripts": {
     "build": "tsc -p tsconfig.json && node scripts/copy-assets.mjs",
     "prepack": "npm run build",
-    "test": "tsc -p tsconfig.tests.json && node --test \"dist-test/tests/**/*.test.js\"",
+    "test": "tsc -p tsconfig.tests.json && node scripts/run-tests.mjs",
     "bundle-plugin": "npm run build && node scripts/bundle-plugin.mjs",
     "setup": "npm run build && node dist/cli/main.js setup",
     "daemon": "node dist/cli/main.js daemon",

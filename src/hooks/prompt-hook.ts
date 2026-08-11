@@ -77,7 +77,6 @@ async function main(): Promise<void> {
 
   let body = "";
   let used = 0;
-  const sources = new Set<string>();
   for (const s of snippets) {
     const when = s.ts ? String(s.ts).slice(0, 10) : "";
     const where = s.project ? ` · ${s.project}` : "";
@@ -86,21 +85,18 @@ async function main(): Promise<void> {
     if (body.length + piece.length > MAX_CHARS) break;
     body += piece;
     used++;
-    if (s.project) sources.add(s.project);
   }
   if (!body) return;
 
   const additionalContext =
     "Relevant context from your past AI coding sessions (auto-recalled):\n" + body;
-  const topScore = Number(snippets[0].score).toFixed(2);
-  const from = sources.size ? ` from ${[...sources].join(", ")}` : "";
   process.stdout.write(
     JSON.stringify({
       hookSpecificOutput: {
         hookEventName: "UserPromptSubmit",
         additionalContext,
       },
-      systemMessage: `🧠 recall: injected ${used} snippet${used === 1 ? "" : "s"}${from} (top ${topScore})`,
+      systemMessage: `recall: injected ${used} snippet${used === 1 ? "" : "s"}`,
     }),
   );
 }
