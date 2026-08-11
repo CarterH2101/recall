@@ -4,26 +4,26 @@ One self-contained HTML file (`src/ui/index.html`). System fonts only. All
 values as CSS custom properties; OKLCH.
 
 ## Theme
-Warm paper ledger, light by default; a deliberate warm-graphite dark variant
-via `prefers-color-scheme`. Never blue-black, never pure #000/#fff.
+Light, airy, techy — the SAME scheme as recall-console (one product, one
+look): cool-gray wash, floating white surfaces with soft two-layer shadows,
+deep navy ink, one vivid indigo-blue accent. Single committed light theme.
+Never pure #000/#fff.
 
-Scene: a developer flips from a dark editor to this tab for twenty seconds to
-check what memory got injected, any hour. Both palettes are first-class.
-
-## Tokens (light / dark)
-- `--paper`   oklch(96.5% 0.007 85)  /  oklch(21% 0.012 75)   page
-- `--surface` oklch(98.6% 0.004 85)  /  oklch(24.5% 0.012 75) panels, inputs
-- `--ink`     oklch(24% 0.015 75)    /  oklch(90% 0.008 85)   primary text
-- `--ink-2`   oklch(44% 0.012 75)    /  oklch(72% 0.01 80)    secondary
-- `--ink-3`   oklch(58% 0.01 78)     /  oklch(56% 0.01 78)    labels, hints
-- `--rule`    oklch(89% 0.008 85)    /  oklch(31% 0.012 75)   hairlines
-- `--accent`  oklch(56% 0.14 55)     /  oklch(74% 0.12 62)    burnt sienna
+## Tokens (shared with recall-console/DESIGN.md)
+- `--paper`   oklch(97.6% 0.005 250)  page wash
+- `--surface` oklch(99.4% 0.002 250)  cards, inputs
+- `--ink`     oklch(26% 0.035 265)    primary text (navy)
+- `--ink-2`   oklch(45% 0.022 262)    secondary
+- `--ink-3`   oklch(60% 0.016 258)    labels, hints
+- `--rule`    oklch(91.5% 0.009 255)  hairlines
+- `--accent`  oklch(52% 0.19 265)     indigo-blue; `--accent-soft` focus rings
 - Kind hues (dots + text, never pill backgrounds):
-  decision = accent · gotcha oklch(54% 0.13 30) · preference oklch(52% 0.09 310)
-  · reference oklch(52% 0.1 150)
+  decision = accent · gotcha oklch(56% 0.15 38) · preference oklch(54% 0.15 305)
+  · reference oklch(52% 0.12 158)
 
 Color strategy: Restrained. Accent on active tab, links, chart bars, focus,
-primary hover. Everything else is inked neutrals.
+primary hover. Everything else is inked neutrals. Stat ledger floats as a
+white card; tables stay hairline-rule only.
 
 ## Type
 - UI: `system-ui, "Segoe UI", -apple-system, sans-serif`, 14px base.

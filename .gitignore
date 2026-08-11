@@ -10,3 +10,4 @@ eval/fixtures/models/
 eval/fixtures/*.db-wal
 eval/fixtures/*.db-shm
 .gstack/
+.gstack/
