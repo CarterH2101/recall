@@ -12,6 +12,11 @@ jobs:
       matrix:
         os: [ubuntu-latest, macos-latest, windows-latest]
         node: [20, 22]
+        exclude:
+          # better-sqlite3 12.x ships no win32 prebuilds for Node 20 (ABI 115)
+          # — Windows requires Node 22+; setup preflights this for users too.
+          - os: windows-latest
+            node: 20
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4

@@ -31,6 +31,14 @@ function preflight(): void {
     console.error(`recall needs Node >= 20.11 (you have ${process.versions.node}).`);
     process.exit(1);
   }
+  if (process.platform === "win32" && major < 22) {
+    console.error(
+      `On Windows, recall needs Node 22+ (you have ${process.versions.node}):\n` +
+        `better-sqlite3 publishes no Windows prebuilt binaries for Node 20, so the\n` +
+        `install would try to compile C++ locally. Upgrade Node and re-run setup.`,
+    );
+    process.exit(1);
+  }
   if (
     (process.platform === "win32" && process.arch === "arm64") ||
     (process.platform === "linux" && fs.existsSync("/etc/alpine-release"))

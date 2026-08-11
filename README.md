@@ -50,8 +50,9 @@ watches `~/.codex/sessions`); index older Codex history once with
 The plugin registers the hooks and the MCP tool declaratively; `/recall:setup`
 installs the runtime.
 
-Requires Node 20.11+. Windows, macOS, and Linux (x64/arm64; Windows-on-ARM and
-Alpine are not supported yet — sqlite-vec has no prebuilds there).
+Requires Node 20.11+ on macOS and Linux, Node 22+ on Windows (better-sqlite3
+ships no Windows prebuilds for Node 20). x64/arm64; Windows-on-ARM and Alpine
+are not supported yet — sqlite-vec has no prebuilds there.
 
 ## What you get
 
