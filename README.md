@@ -74,6 +74,10 @@ Claude Code ──Stop hook──────────► recalld (local daem
 
 ## Configuration (env vars, all optional)
 
+These are read from the real process environment (nothing loads `.env` —
+`.env.example` is documentation). Set persistent values system-wide
+(`setx` on Windows).
+
 | Var | Default | Meaning |
 |-----|---------|---------|
 | `RECALL_DB_PATH` | `~/.recall/memory.db` | DB file location |
@@ -81,8 +85,11 @@ Claude Code ──Stop hook──────────► recalld (local daem
 | `RECALL_BIND` | `127.0.0.1` | Set `0.0.0.0` to allow phone access (token required) |
 | `RECALL_MODEL` | `Xenova/bge-small-en-v1.5` | Local embedding model |
 | `RECALL_ENABLED` | `true` | Set `false` to instantly disable auto-inject |
-| `RECALL_MIN_SCORE` | `0.4` | Min similarity for auto-injected snippets |
+| `RECALL_MIN_SCORE` | `0.75` | Min similarity for auto-injected snippets |
 | `RECALL_ASK_MIN_SCORE` | `0.45` | Min similarity for Siri `/ask` answers |
+| `RECALL_PROJECT_ROOTS` | — | `path=label;path=label` cwd→project mapping (also `~/.recall/config.json`) |
+| `RECALL_DEBUG` | — | `1` for daemon request logging (metadata only) |
+| `RECALL_PRUNE_CWD` | — | cwd substrings treated as junk by prune-noise |
 
 ## Uninstall
 

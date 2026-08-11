@@ -15,6 +15,7 @@
   },
   "scripts": {
     "build": "tsc -p tsconfig.json",
+    "test": "tsc -p tsconfig.tests.json && node --test \"dist-test/tests/**/*.test.js\"",
     "setup": "npm run build && node dist/cli/setup.js",
     "daemon": "node dist/daemon/server.js",
     "backfill": "node dist/cli/backfill.js",

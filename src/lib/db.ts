@@ -18,8 +18,13 @@ export function getDb(): Database.Database {
   return db;
 }
 
-function migrate(db: Database.Database): void {
-  db.exec(`
+// Versioned migrations via PRAGMA user_version. Each entry runs exactly once,
+// in order; v1 is the original CREATE IF NOT EXISTS block so pre-versioning
+// databases (user_version 0) pass through it as a no-op.
+const MIGRATIONS: ((db: Database.Database) => void)[] = [
+  /* v1 — baseline schema */
+  (db) =>
+    db.exec(`
     CREATE TABLE IF NOT EXISTS sessions (
       id           TEXT PRIMARY KEY,
       source_agent TEXT NOT NULL DEFAULT 'claude-code',
@@ -43,7 +48,16 @@ function migrate(db: Database.Database): void {
 
     CREATE VIRTUAL TABLE IF NOT EXISTS vec_turns
       USING vec0(embedding float[${DIM}] distance_metric=cosine);
-  `);
+  `),
+];
+
+function migrate(db: Database.Database): void {
+  let v = db.pragma("user_version", { simple: true }) as number;
+  for (; v < MIGRATIONS.length; v++) {
+    const apply = db.transaction(() => MIGRATIONS[v](db));
+    apply();
+    db.pragma(`user_version = ${v + 1}`);
+  }
 }
 
 /** Pack a vector into a BLOB for sqlite-vec binding. */

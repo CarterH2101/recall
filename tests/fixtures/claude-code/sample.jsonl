@@ -1,0 +1,7 @@
+{"sessionId":"fix-sess-1","type":"user","uuid":"fix-u1","timestamp":"2026-08-01T09:00:00Z","cwd":"/home/dev/projects/webapp","gitBranch":"main","message":{"content":"why does the login form 500 on submit?"}}
+{"sessionId":"fix-sess-1","type":"assistant","uuid":"fix-a1","timestamp":"2026-08-01T09:00:12Z","message":{"content":[{"type":"text","text":"The handler awaits a missing env var. Add SESSION_SECRET to .env and restart."},{"type":"tool_use","name":"Read"},{"type":"tool_use","name":"Edit"}]}}
+{"type":"summary","summary":"a summary line without sessionId that must be ignored"}
+{"sessionId":"fix-sess-2","type":"user","uuid":"fix-u2","timestamp":"2026-08-02T14:30:00Z","cwd":"C:\\Users\\dev\\projects\\api","gitBranch":"feature/rate-limit","message":{"content":"add a rate limiter to the public endpoints"}}
+not-json garbage line
+{"sessionId":"fix-sess-2","type":"assistant","uuid":"fix-a2","timestamp":"2026-08-02T14:31:00Z","message":{"content":[{"type":"tool_use","name":"Bash"}]}}
+{"sessionId":"fix-sess-2","type":"assistant","uuid":"fix-a3","timestamp":"2026-08-02T14:32:10Z","message":{"content":[{"type":"text","text":"Added token-bucket middleware at 100 req/min per IP, applied to /api/public/*."}]}}
